@@ -56,7 +56,7 @@ unless you pass `--force`.
 
 ## Post-install checklist
 1. `node scripts/okf-conformance.mjs` → must pass (every concept has a `type`).
-2. **Activate personas as Pi skills** (frontmatter is OKF-clean; place in `.pi/skills/` or point Pi at `.iuvareai/agents/`).
+2. **Activate personas for your harness** — the `.iuvareai/agents/*.md` concepts are Agent-Skills-compatible; copy them into your agent's skill dir (Pi: `.pi/skills/`; Claude Code: `.claude/skills/`; Cursor: `.cursor/skills/`). Keep harness-specific activation in your project, not this agnostic template.
 3. **Wire CI** — add `okf-conformance`, `dor-check`, `contract-guard`, and `secret-scan` as required checks (see [ci.md](../policies/ci.md)).
 4. **Build the sandbox extension** (see [sandbox.md](../policies/sandbox.md)) — the one enforcement mechanism prose can't provide.
 5. **Start your first story** — Analyst → PM → Architect → Product Owner → Developer → QA.

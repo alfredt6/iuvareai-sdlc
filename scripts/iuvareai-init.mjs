@@ -45,4 +45,4 @@ console.log(`✓ scaffolded .iuvareai/ + scripts/ into ${target}`);
 console.log(`\nNext steps:`);
 console.log(`  cd ${target}`);
 console.log(`  node scripts/okf-conformance.mjs   # verify the bundle`);
-console.log(`  # then activate personas as Pi skills, wire CI, and start your first story.`);
+console.log(`  # then activate personas for your harness, wire CI, and start your first story.`);

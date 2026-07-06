@@ -233,7 +233,7 @@ Cost alone can't improve a framework that runs on prompt quality. Per story, als
 
 ## 🧩 SECTION 6: The Personas (full roster)
 
-Personas are Markdown profiles in `.iuvareai/agents/`, loaded as Pi skills **on demand** (only the active-phase persona is in context — context hygiene). Each carries YAML frontmatter mirroring §5.1 permission sets.
+Personas are Markdown profiles in `.iuvareai/agents/`, loaded as skills **on demand** (only the active-phase persona is in context — context hygiene). Each carries YAML frontmatter mirroring §5.1 permission sets.
 
 | Persona | Phase | Core responsibility | Primary artifact |
 |---|---|---|---|
@@ -492,7 +492,9 @@ Use this to evaluate *any* agent SDLC (yours, BMAD, the next thing). v3's curren
 
 ---
 
-## 🧩 SECTION 15: Pi-Specific Implementation Notes
+## 🧩 SECTION 15: Harness Implementation Notes (Pi reference)
+
+> Examples below use **Pi** as the reference harness. Other harnesses (Claude Code, Cursor, OpenAI Codex) have analogous mechanisms — adapt accordingly.
 
 Pi ships four built-in tools, no sub-agents, no plan mode, no permission system. v3 maps to Pi as follows:
 

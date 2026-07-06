@@ -31,7 +31,7 @@ git clone https://github.com/alfredt6/iuvareai-sdlc /tmp/iuvareai
 node /tmp/iuvareai/scripts/iuvareai-init.mjs /path/to/existing-project
 ```
 
-Then activate per-project: personas → Pi skills, wire CI, build the sandbox extension. See **[Install & Reuse](.iuvareai/docs/install.md)**.
+Then activate per-project: personas → your harness's skills, wire CI, build the sandbox extension. See **[Install & Reuse](.iuvareai/docs/install.md)**.
 
 ## What's inside
 
@@ -73,7 +73,7 @@ iuvareai-sdlc/
 
 ## Status
 
-v3.0 — documentation layer complete and OKF-conformant. Activation layer (Pi skills, sandbox extension, CI wiring) is applied per-project. See the [Adoption Roadmap](.iuvareai/IUVARE_AI_SDLC_v3.md) (§16).
+v3.0 — documentation layer complete and OKF-conformant. Activation layer (harness skills, sandbox extension, CI wiring) is applied per-project. See the [Adoption Roadmap](.iuvareai/IUVARE_AI_SDLC_v3.md) (§16).
 
 ## License
 

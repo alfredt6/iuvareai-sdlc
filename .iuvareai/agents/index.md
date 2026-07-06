@@ -1,6 +1,6 @@
 # Personas
 
-Role profiles loaded as Pi skills (only the active-phase persona is kept in
+Role profiles loaded as on-demand skills (only the active-phase persona is kept in
 context). Each carries YAML frontmatter mirroring its permission set
 (`writes_to` / `reads_from`).
 

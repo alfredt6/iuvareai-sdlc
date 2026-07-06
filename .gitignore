@@ -17,6 +17,11 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Harness skill activation (generated from .iuvareai/agents/ — harness-specific, do not commit)
+.pi/skills/
+.claude/skills/
+.cursor/skills/
+
 # NOTE: .iuvareai/sessions/*.jsonl and .iuvareai/metrics/*.jsonl are COMMITTED
 # on purpose — they are the audit trail and per-story cost/quality logs.
 # Do NOT ignore them.
