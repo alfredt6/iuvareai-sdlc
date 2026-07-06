@@ -20,14 +20,14 @@ In the AI-native era the bottleneck inverts: time saved typing syntax is reinves
 
 **New project (preferred):**
 ```bash
-npx degit YOURNAME/iuvareai-sdlc my-project
+npx degit alfredt6/iuvareai-sdlc my-project
 cd my-project
 node scripts/okf-conformance.mjs   # → ✓ OKF v0.1 conformance passed
 ```
 
 **Add to an existing project:**
 ```bash
-git clone https://github.com/YOURNAME/iuvareai-sdlc /tmp/iuvareai
+git clone https://github.com/alfredt6/iuvareai-sdlc /tmp/iuvareai
 node /tmp/iuvareai/scripts/iuvareai-init.mjs /path/to/existing-project
 ```
 

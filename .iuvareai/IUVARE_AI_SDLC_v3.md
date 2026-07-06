@@ -1,18 +1,18 @@
 ---
 type: Specification
 title: "The Iuvare AI SDLC (v3.0)"
-description: "The proprietary AI-driven SDLC blueprint: tracks, phases, personas, gates, and governance."
+description: "The open AI-driven SDLC blueprint: tracks, phases, personas, gates, and governance."
 tags: [sdlc, specification]
 timestamp: 2026-07-04
 ---
 
 # 📜 THE IUVARE AI SDLC (v3.0)
-### The Proprietary Software Engineering Blueprint for Iuvare AI
+### The Open Software Engineering Blueprint for Iuvare AI
 
-> **Relationship to v2:** This document supersedes `IUVARE_AI_ORCHESTRATION_FLOW_v2.md`.
-> v2 is retained for diff/history. v3 broadens the scope from an *orchestration
-> flow* to a complete *AI-driven Software Development Lifecycle*, closing the
-> governance and execution gaps identified in the v2 review.
+> **Canonical version.** This is the single authoritative Iuvare AI SDLC. It
+> evolved from earlier "orchestration-flow" drafts into a complete AI-driven
+> Software Development Lifecycle, closing the governance and execution gaps found
+> in review. Earlier drafts live in git history.
 
 ---
 

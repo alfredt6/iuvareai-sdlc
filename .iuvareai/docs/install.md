@@ -39,7 +39,7 @@ gives you a clean framework with no leftover stories.
 - **GitHub UI:** "Use this template → Create a new repository."
 - **CLI (no git history):**
   ```bash
-  npx degit yourname/iuvareai-sdlc my-new-project
+  npx degit alfredt6/iuvareai-sdlc my-new-project
   cd my-new-project
   node scripts/okf-conformance.mjs   # verify
   ```
@@ -47,7 +47,7 @@ gives you a clean framework with no leftover stories.
 ## Method B — add the SDLC to an *existing* project
 Clone the template anywhere, then run the init script pointing at your project:
 ```bash
-git clone https://github.com/yourname/iuvareai-sdlc /tmp/iuvare
+git clone https://github.com/alfredt6/iuvareai-sdlc /tmp/iuvare
 node /tmp/iuvare/scripts/iuvareai-init.mjs /path/to/existing-project
 ```
 The script copies `.iuvareai/` (excluding any data logs) and `scripts/`, and ensures
