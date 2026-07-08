@@ -10,6 +10,7 @@ context). Each carries YAML frontmatter mirroring its permission set
 
 # Phase 2 — Architectural Mapping & Data Contracts
 * [The Technical Architect](architect.md) — stack, data flow, versioned data contract
+* [The UX/UI Designer](ux-designer.md) — design system, user flows, accessibility, UI specs
 * [The Product Owner](product-owner.md) — shards the PRD into atomic, testable stories
 
 # Phase 3 — Spec-Driven Development

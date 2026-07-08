@@ -15,7 +15,7 @@ template, then scaffold every future project from it in seconds.
 
 | Reusable (the framework — ship in the template) | Per-project (empty in the template; filled per project) |
 |---|---|
-| `agents/` (10 personas) | `specs/` (PROJECT_BRIEF, PRD, Architecture, DataContract) |
+| `agents/` (11 personas) | `specs/` (PROJECT_BRIEF, PRD, Architecture, DataContract, UI_DESIGN) |
 | `policies/` (5 governance) | `stories/` |
 | `docs/` (methodology) | `deltas/` |
 | `scripts/` (conformance, DoR, contract-guard, init) | `sessions/` (JSONL logs) |

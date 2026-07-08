@@ -15,7 +15,7 @@ OKF requires exactly one field — `type`. Iuvare defines these values:
 |---|---|---|
 | `Specification` | the SDLC blueprint itself | root |
 | `Persona` | an AI role profile (loaded as a skill) | `agents/` |
-| `ProjectBrief` · `PRD` · `Architecture` · `DataContract` | systemic specs | `specs/` |
+| `ProjectBrief` · `PRD` · `Architecture` · `DataContract` · `UIDesign` | systemic specs | `specs/` |
 | `Story` | a feature implementation shard | `stories/` |
 | `Delta` | a change request against shipped code | `deltas/` |
 | `Policy` | an enforced governance rule | `policies/` |
@@ -26,7 +26,7 @@ Iuvare-specific fields (`status`, `owner`, `contract_version`, `depends_on`, `de
 ## Manifest
 
 # Roles
-* [agents/](agents/) — the WHO: 10 persona profiles (Analyst → Orchestrator)
+* [agents/](agents/) — the WHO: 11 persona profiles (Analyst → Orchestrator, + UX/UI Designer)
 
 # Systemic specs
 * [specs/](specs/) — the WHAT: brief, PRD, architecture, data contract (created Phase 1–2)

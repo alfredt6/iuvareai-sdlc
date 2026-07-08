@@ -240,6 +240,7 @@ Personas are Markdown profiles in `.iuvareai/agents/`, loaded as skills **on dem
 | **Analyst** | 1 | Market alignment, risk, scope boundaries | `PROJECT_BRIEF.md` |
 | **PM** | 1 | Functional/NFRs, epics | `PRD.md` |
 | **Technical Architect** | 2 | Stack, data flow, versioned contract | `ARCHITECTURE.md`, `DATAMODEL_CONTRACT.md` |
+| **UX/UI Designer** | 2 | Design system, IA, accessibility, UI specs | `UI_DESIGN.md` |
 | **Product Owner** | 2 | Shards the PRD into stories | `stories/*.md` |
 | **Developer** | 3 | Context-shielded implementation | `src/`, `tests/` |
 | **Code Reviewer** | 3 | Security + dependency guardrails | Review verdict on PR |

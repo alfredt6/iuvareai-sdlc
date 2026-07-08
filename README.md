@@ -40,7 +40,7 @@ iuvareai-sdlc/
 ├── .iuvareai/                     # the OKF knowledge bundle
 │   ├── IUVARE_AI_SDLC_v3.md       # the master spec
 │   ├── index.md                   # bundle root + type vocabulary
-│   ├── agents/      (10 personas) # the WHO — role behaviors
+│   ├── agents/      (11 personas) # the WHO — role behaviors
 │   ├── policies/    (5 policies)  # the MUST — enforced rules
 │   ├── docs/        (6 guides)    # the HOW — methodology
 │   ├── specs/ stories/ deltas/    # created per project (empty here)
@@ -51,7 +51,7 @@ iuvareai-sdlc/
 ## Core ideas
 
 - **4 intelligence tracks** — Flash / Delta / Blueprint / Genesis — match process weight to risk so a hotfix isn't crushed under greenfield ceremony.
-- **10 personas** — loaded as on-demand skills (only the active phase is in context).
+- **11 personas** — loaded as on-demand skills (only the active phase is in context).
 - **Definition of Ready** — a machine-checked gate that stops un-startable stories before they waste an agent run.
 - **Semver data contracts** — every story cites a contract version; a MAJOR bump auto-flags stale stories so they can't silently generate code against an outdated schema.
 - **Bounded self-healing** — max 3 fix attempts, then escalate. No infinite retry loops, no runaway quota burn.
