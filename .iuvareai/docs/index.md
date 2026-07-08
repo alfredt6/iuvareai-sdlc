@@ -9,3 +9,4 @@ are *enforced*); these are *followed*.
 * [OKF Adoption](okf.md) — how this bundle conforms to the Open Knowledge Format
 * [OKF Philosophy](okf-philosophy.md) — why a *format*, not docs (the mental model)
 * [Install & Reuse](install.md) — scaffolding the SDLC into new projects
+* [Loop Engineering](loop-engineering.md) — how Iuvare adopts agent loops (bounded; never infinite)

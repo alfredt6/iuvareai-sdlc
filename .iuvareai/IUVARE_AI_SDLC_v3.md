@@ -20,6 +20,8 @@ timestamp: 2026-07-04
 
 > **📦 OKF adoption (post-v3):** The `.iuvareai/` tree is now an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) v0.1 bundle. Every knowledge concept carries a `type` field; `index.md` manifests enable progressive disclosure; `scripts/okf-conformance.mjs` validates the bundle. Iuvare-specific fields ride as producer extensions. See [docs/okf.md](docs/okf.md).
 
+> **🔁 Loop engineering (post-v3):** Iuvare adopts agent loops in a **bounded** way — fresh-context loops and `/goal`-until-verifiable = yes; infinite / unattended loops = no. The OKF bundle is the loop's external memory. See [docs/loop-engineering.md](docs/loop-engineering.md).
+
 **Structural / governance additions:**
 - **Definition of Ready (DoR)** — automated spec-quality gate that stops vague PRDs and un-ready stories from reaching the Developer. *(Closes v2's sharpest gap: specs were disciplined only by a human sign-off.)*
 - **Story State Machine** — every shard now carries `status` / `owner` / `depends_on`; stories move through a defined lifecycle so nothing is grabbed twice and recovery after interruption is deterministic.
@@ -132,6 +134,7 @@ Every story shard must pass the **DoR checklist (§8)** — automated via CI —
 - **Personas:** Developer (drafts logic) · Code Reviewer (security + dependency guardrails).
 - **Context Window Shield:** each agent receives *only* the shard, `DATAMODEL_CONTRACT.md`, and the target file(s).
 - **🚫 Gate 3:** Human Conductor reviews the git diff line-by-line on the PR before staging.
+- **Development loop (optional):** a bounded `/goal`-style loop may iterate the Developer until the shard's `test_criteria` pass + lint is clean, checked by an independent model and capped by the self-heal (Phase 4) + per-story budget. See [docs/loop-engineering.md](docs/loop-engineering.md).
 
 ### 🧪 Phase 4 — Autonomous Verification & Self-Healing
 **Objective:** Validate and remediate within bounds.
