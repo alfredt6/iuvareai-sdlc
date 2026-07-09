@@ -44,15 +44,40 @@ gives you a clean framework with no leftover stories.
   node scripts/okf-conformance.mjs   # verify
   ```
 
-## Method B — add the SDLC to an *existing* project
+## Method B — add the SDLC to an *existing* project (brownfield)
 Clone the template anywhere, then run the init script pointing at your project:
 ```bash
 git clone https://github.com/alfredt6/iuvareai-sdlc /tmp/iuvare
 node /tmp/iuvare/scripts/iuvareai-init.mjs /path/to/existing-project
 ```
-The script copies `.iuvareai/` (excluding any data logs) and `scripts/`, and ensures
-the per-project artifact dirs exist. It refuses to clobber an existing `.iuvareai/`
-unless you pass `--force`.
+
+**What it does** — adds `.iuvareai/` (excluding data logs), the tooling `scripts/`,
+and a starter `AGENTS.md`. **Your existing code is never touched.**
+
+**If your project already has a `scripts/` directory** — the installer **merges**:
+your scripts are preserved and the Iuvare scripts are added alongside. If a file
+name *collides* (e.g. you already have a `scripts/okf-conformance.mjs`), it
+**aborts safely** without overwriting; rename your file, or re-run with `--force`
+to overwrite.
+
+**Guards:** it refuses to clobber an existing `.iuvareai/` or `AGENTS.md`
+(use `--force` to override).
+
+### Starting Phase 1 with no brief/PRD (brownfield)
+An existing project usually has **no `PROJECT_BRIEF.md`/`PRD.md`** yet — that's
+expected; `specs/` ships with only the `PROJECT_SEED.md` template. Begin at
+Phase 1 and let the **Analyst reverse-engineer** the brief from your existing code:
+
+```
+/skill:analyst
+This is an existing codebase with no brief/PRD yet. Read the repo (README, code
+structure, manifest, any docs) to understand what this product is. Then ask me a
+numbered list of clarifying questions (vision, users, in-scope vs out-of-scope,
+risks). After I answer, write .iuvareai/specs/PROJECT_BRIEF.md capturing the
+product as it truly is.
+```
+
+Then Gate 1 → PM (`PRD.md`) → Architect/UX → stories.
 
 ## Post-install checklist
 1. `node scripts/okf-conformance.mjs` → must pass (every concept has a `type`).
