@@ -11,3 +11,11 @@ scaffolding, or persona work.
 - **Validate the bundle:** `node scripts/okf-conformance.mjs`
 - **Start a story:** see `.iuvareai/docs/install.md` and the Adoption Roadmap
   (SDLC §16).
+
+## Framework integrity — do not alter without explicit instruction
+- Do **not** create, rename, or modify **skills** or any `.iuvareai/` framework
+  file (personas, policies, docs, the spec, scripts) unless explicitly asked.
+- Output goes in `src/`, `tests/`, and the project's per-project dirs (`specs/`,
+  `stories/`, `deltas/`) — never in skill directories or framework config.
+- The framework's source of truth is the `iuvareai-sdlc` template; re-sync with
+  `node scripts/iuvareai-init.mjs . --force` if a project's copy drifts.
