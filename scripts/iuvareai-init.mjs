@@ -67,4 +67,5 @@ console.log(`\n✓ Iuvare AI SDLC installed into ${target}`);
 console.log(`\nNext steps:`);
 console.log(`  cd ${target}`);
 console.log(`  node scripts/okf-conformance.mjs   # verify the bundle`);
-console.log(`  # activate personas for your harness (Pi: generate .pi/skills/), then /skill:analyst to start Phase 1.`);
+console.log(`  node scripts/activate-pi-skills.mjs   # Pi: generate .pi/skills/ from the personas (skills activation)`);
+console.log(`  # then /skill:analyst to start Phase 1 (or /skill:iuvareai-sdlc for the orientation map).`);

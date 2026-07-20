@@ -81,7 +81,12 @@ Then Gate 1 → PM (`PRD.md`) → Architect/UX → stories.
 
 ## Post-install checklist
 1. `node scripts/okf-conformance.mjs` → must pass (every concept has a `type`).
-2. **Activate personas for your harness** — the `.iuvareai/agents/*.md` concepts are Agent-Skills-compatible; copy them into your agent's skill dir (Pi: `.pi/skills/`; Claude Code: `.claude/skills/`; Cursor: `.cursor/skills/`). Keep harness-specific activation in your project, not this agnostic template.
+2. **Activate the persona skills for your harness.** The `.iuvareai/agents/*.md` concepts are Agent-Skills-compatible and the **single source of truth**; generate your harness's skill files from them:
+   - **Pi (one command):** `node scripts/activate-pi-skills.mjs` → writes `.pi/skills/<persona>.md` for all 11 personas + an `iuvareai-sdlc` orientation/router skill. **Re-run it whenever you edit a persona.** Skills auto-match by description, or load with `/skill:<name>` (e.g. `/skill:analyst`, `/skill:iuvareai-sdlc`).
+   - **Claude Code:** copy `.iuvareai/agents/*.md` → `.claude/skills/`.
+   - **Cursor:** copy `.iuvareai/agents/*.md` → `.cursor/skills/`.
+
+   Keep harness-specific activation in your project, not this agnostic template: the **generated** skill files (`.pi/skills/`, `.claude/skills/`, `.cursor/skills/`) are per-project artifacts — **do not commit them to the template**. Edit `.iuvareai/agents/*.md` and re-generate; never hand-edit the generated skills.
 3. **Wire CI** — add `okf-conformance`, `dor-check`, `contract-guard`, and `secret-scan` as required checks (see [ci.md](../policies/ci.md)).
 4. **Build the sandbox extension** (see [sandbox.md](../policies/sandbox.md)) — the one enforcement mechanism prose can't provide.
 5. **Start your first story** — Analyst → PM → Architect → Product Owner → Developer → QA.

@@ -31,7 +31,11 @@ git clone https://github.com/alfredt6/iuvareai-sdlc /tmp/iuvareai
 node /tmp/iuvareai/scripts/iuvareai-init.mjs /path/to/existing-project
 ```
 
-Then activate per-project: personas → your harness's skills, wire CI, build the sandbox extension. See **[Install & Reuse](.iuvareai/docs/install.md)**.
+Then activate the persona skills per-project:
+- **Pi:** `node scripts/activate-pi-skills.mjs` (generates `.pi/skills/` from `.iuvareai/agents/`).
+- **Claude Code / Cursor:** copy `.iuvareai/agents/*.md` into `.claude/skills/` or `.cursor/skills/`.
+
+Then wire CI and build the sandbox extension. See **[Install & Reuse](.iuvareai/docs/install.md)**.
 
 ## What's inside
 
@@ -45,7 +49,7 @@ iuvareai-sdlc/
 │   ├── docs/        (6 guides)    # the HOW — methodology
 │   ├── specs/ stories/ deltas/    # created per project (empty here)
 │   └── sessions/ metrics/         # audit + cost/quality logs
-└── scripts/                       # conformance, DoR, contract-guard, init
+└── scripts/                       # conformance, DoR, contract-guard, init, skills-activation
 ```
 
 ## Core ideas
