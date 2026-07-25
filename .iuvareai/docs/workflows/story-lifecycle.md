@@ -16,9 +16,14 @@ audience: [orchestrator, developer, code-reviewer, test-architect, qa]
 Focus on the happy path first. Open [Recovery](recovery.md) only when something
 fails.
 
-<a href="assets/story-lifecycle.svg"><img src="assets/story-lifecycle.svg" alt="Story lifecycle" height="420"></a>
-
-[Open zoomable view](assets/story-lifecycle.svg) · [Mermaid source](assets/story-lifecycle.mmd)
+```mermaid
+flowchart TD
+    A[draft] -->|DoR passes| B[ready]
+    B -->|Orchestrator assigns| C[in progress]
+    C -->|Implementation complete| D[review]
+    D -->|Gate 3 approved| E[qa]
+    E -->|Required tests green| F[done]
+```
 
 | State | What happens now | Who moves it forward |
 |---|---|---|

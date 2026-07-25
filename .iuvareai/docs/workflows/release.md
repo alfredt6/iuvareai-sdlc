@@ -15,9 +15,18 @@ audience: [release-manager, conductor]
 
 Start here only after the story is `done`.
 
-<a href="assets/release.svg"><img src="assets/release.svg" alt="Track-specific release paths" width="760"></a>
-
-[Open zoomable view](assets/release.svg) · [Mermaid source](assets/release.mmd)
+```mermaid
+flowchart TD
+    A([Story done]) --> B{Track}
+    B -- Flash --> F[Stop at local completion]
+    B -- Delta --> D[Regression green, then human production approval]
+    B -- Blueprint --> P[Staging suite, rollback confirmation, human approval]
+    B -- Genesis --> G[Full regression, staging and NFRs, rollback, Final Gate]
+    D --> Z([Release complete])
+    P --> Z
+    G --> Z
+    F --> Z
+```
 
 | Track | Required path |
 |---|---|

@@ -17,11 +17,16 @@ references: ["SDLC v3.1 §2–§16", "Focused workflow guides"]
 **Do not follow every framework path.** Choose one track, read that track's page,
 then use the shared story and release guides when the page tells you to.
 
-<a href="workflows/assets/overview.svg"><img src="workflows/assets/overview.svg" alt="Six-step framework overview" height="420"></a>
+```mermaid
+flowchart TD
+    A([Work request]) --> B[Choose one track]
+    B --> C[Prepare only that track's required specification]
+    C --> D[Create one story or Delta shard]
+    D --> E[Deliver the shard through review and QA]
+    E --> F[Release using that track's controls]
+```
 
-[Open zoomable view](workflows/assets/overview.svg) · [Mermaid source](workflows/assets/overview.mmd)
-
-**Zoom controls in VS Code (Better SVG):** click to zoom in, **Alt+click** to zoom out, drag to pan, and use **Center SVG** to reset/fit. If the controls are absent, install `midudev.better-svg`.
+The Mermaid toolbar is always visible: use **+**, **−**, reset, or drag the resize handle.
 
 ## Step 1 — Choose your route
 

@@ -1,9 +1,0 @@
-%%{init: {"flowchart": {"useMaxWidth": false}}}%%
-flowchart TD
-    A[PRD Shard and API Contract] --> B{Gate 1}
-    B -- Changes --> A
-    B -- Approved --> C[Architect and UX: affected design]
-    C --> D[Product Owner: atomic stories]
-    D --> E{Gate 2 if schema or integration changes}
-    E -- Changes --> C
-    E -- Approved or not needed --> F[Deliver first ready story]

@@ -16,9 +16,15 @@ audience: [conductor]
 **Use when:** the change is small, local, and will not be promoted to production.
 If it modifies shipped production code, use [Delta](delta.md).
 
-<a href="assets/flash.svg"><img src="assets/flash.svg" alt="Flash workflow" height="420"></a>
-
-[Open zoomable view](assets/flash.svg) · [Mermaid source](assets/flash.mmd)
+```mermaid
+flowchart TD
+    A[Write TECH SPEC] --> B[Human Conductor implements]
+    B --> C[Focused local tests]
+    C -- Fail --> B
+    C -- Green --> D{Gate 3 diff review}
+    D -- Changes --> B
+    D -- Approved --> E([Complete locally])
+```
 
 ## Five actions only
 

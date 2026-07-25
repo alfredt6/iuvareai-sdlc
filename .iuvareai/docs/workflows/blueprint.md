@@ -16,9 +16,16 @@ audience: [conductor, architect, ux-designer, product-owner]
 **Use when:** the feature is bounded but needs explicit interfaces, design, and
 staging verification.
 
-<a href="assets/blueprint.svg"><img src="assets/blueprint.svg" alt="Blueprint planning workflow" height="460"></a>
-
-[Open zoomable view](assets/blueprint.svg) · [Mermaid source](assets/blueprint.mmd)
+```mermaid
+flowchart TD
+    A[PRD Shard and API Contract] --> B{Gate 1}
+    B -- Changes --> A
+    B -- Approved --> C[Architect and UX: affected design]
+    C --> D[Product Owner: atomic stories]
+    D --> E{Gate 2 if schema or integration changes}
+    E -- Changes --> C
+    E -- Approved or not needed --> F[Deliver first ready story]
+```
 
 ## Do these steps in order
 

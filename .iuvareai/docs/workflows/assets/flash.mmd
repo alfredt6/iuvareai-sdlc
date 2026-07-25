@@ -1,8 +1,0 @@
-%%{init: {"flowchart": {"useMaxWidth": false}}}%%
-flowchart TD
-    A[Write TECH SPEC] --> B[Human Conductor implements]
-    B --> C[Focused local tests]
-    C -- Fail --> B
-    C -- Green --> D{Gate 3 diff review}
-    D -- Changes --> B
-    D -- Approved --> E([Complete locally])

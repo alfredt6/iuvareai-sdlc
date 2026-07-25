@@ -11,11 +11,11 @@ Read one route at a time:
 
 ## Diagram controls
 
-Diagrams are compact previews. Select **Open zoomable view** below one to inspect it in VS Code:
+Every guide embeds its Mermaid diagram directly. The toolbar is always visible:
 
-- **Zoom in:** click
-- **Zoom out:** `Alt`+click
-- **Pan:** drag
-- **Reset/fit:** select **Center SVG**
+- **+ / −:** zoom in or out
+- **Reset:** restore the fitted view
+- **Resize handle:** make the diagram panel taller or shorter
+- **Mouse navigation:** pan or zoom directly in the diagram
 
-These controls use the `midudev.better-svg` VS Code extension.
+No SVG link or separate viewer is required.

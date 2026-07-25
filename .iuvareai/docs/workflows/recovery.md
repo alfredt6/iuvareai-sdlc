@@ -16,9 +16,20 @@ audience: [orchestrator, developer, qa, release-manager, conductor]
 Identify where the failure occurred, follow only that row, then return to the
 normal lifecycle.
 
-<a href="assets/recovery.svg"><img src="assets/recovery.svg" alt="Recovery routing" width="760"></a>
-
-[Open zoomable view](assets/recovery.svg) · [Mermaid source](assets/recovery.mmd)
+```mermaid
+flowchart TD
+    A([Problem detected]) --> B{Where did it fail?}
+    B -- DoR --> C[Fix shard specification and return to draft]
+    B -- Review --> D[Developer reworks; max two cycles]
+    B -- QA --> E[Bounded self-heal; max three attempts]
+    B -- Contract --> F[Mark stale and re-ready]
+    B -- Production --> G[Rollback and open Delta fix]
+    C --> H([Resume normal workflow])
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+```
 
 | Failure | Immediate action | Resume when |
 |---|---|---|

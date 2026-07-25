@@ -15,9 +15,16 @@ audience: [conductor, orchestrator, developer]
 
 **Use when:** changing, fixing, or refactoring shipped code.
 
-<a href="assets/delta.svg"><img src="assets/delta.svg" alt="Delta preparation workflow" height="460"></a>
-
-[Open zoomable view](assets/delta.svg) · [Mermaid source](assets/delta.mmd)
+```mermaid
+flowchart TD
+    A[Load shipped source, tests, and original story] --> B[Write Delta shard]
+    B --> C{Contract touched?}
+    C -- Yes --> D[Version contract and run contract guard]
+    C -- No --> E[Run DoR]
+    D --> E
+    E --> F[Deliver shard]
+    F --> G[Run existing regression suite]
+```
 
 ## Do these steps in order
 

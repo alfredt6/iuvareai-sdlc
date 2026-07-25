@@ -16,9 +16,18 @@ audience: [conductor, analyst, pm, architect, ux-designer, product-owner]
 **Use when:** building a new product, performing a major upgrade, or changing the
 system as a whole.
 
-<a href="assets/genesis.svg"><img src="assets/genesis.svg" alt="Genesis planning workflow" height="460"></a>
-
-[Open zoomable view](assets/genesis.svg) · [Mermaid source](assets/genesis.mmd)
+```mermaid
+flowchart TD
+    A[Project Seed] --> B[Analyst: Project Brief]
+    B --> C[PM: PRD]
+    C --> D{Gate 1}
+    D -- Changes --> B
+    D -- Approved --> E[Architect and UX]
+    E --> F[Product Owner: Stories]
+    F --> G{Gate 2}
+    G -- Changes --> E
+    G -- Approved --> H[Deliver first ready story]
+```
 
 ## Do these steps in order
 

@@ -15,9 +15,16 @@ audience: [conductor, orchestrator]
 
 Answer the questions in order and stop at the first match.
 
-<a href="assets/choose-track.svg"><img src="assets/choose-track.svg" alt="Track selection decision" height="460"></a>
-
-[Open zoomable view](assets/choose-track.svg) · [Mermaid source](assets/choose-track.mmd)
+```mermaid
+flowchart TD
+    A([New work]) --> B{Greenfield, major upgrade, or systemic change?}
+    B -- Yes --> G[Genesis]
+    B -- No --> C{Changes code or behavior already shipped?}
+    C -- Yes --> D[Delta]
+    C -- No --> E{Isolated feature with its own scope?}
+    E -- Yes --> P[Blueprint]
+    E -- No --> F[Flash: small local-only change]
+```
 
 | Track | Use it when | Required preparation | Next guide |
 |---|---|---|---|
