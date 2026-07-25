@@ -5,7 +5,7 @@ description: "Mermaid navigation maps for the complete Iuvare AI SDLC, including
 tags: [methodology, workflow, mermaid, onboarding]
 timestamp: 2026-07-25
 doc: complete-workflow
-version: 1.0.2
+version: 1.0.3
 status: active
 last_updated: 2026-07-25
 audience: [conductor, orchestrator, all-personas]
@@ -28,18 +28,20 @@ active policies win.
 - **DoR** — machine-checked structural startability plus Gate-2 semantic review.
 - **DoD** — tests green, Gate 3 recorded, artifacts merged, and audit data saved.
 
-> **VS Code preview:** each section displays a committed PNG, so no Mermaid
-> extension is required. The editable Mermaid source is stored separately as
-> `.mmd` to prevent preview-renderer conflicts. VS Code 1.121+ supports Mermaid
-> natively; do not install the deprecated `bierner.markdown-mermaid` extension.
+> **VS Code preview:** each section displays a scalable SVG, so no Mermaid
+> extension is required and zoom remains sharp. Use **Open scalable SVG** to open
+> VS Code's image viewer, then zoom or pan there. Editable Mermaid source is kept
+> separately as `.mmd`; PNG is retained only as a compatibility fallback. VS Code
+> 1.121+ supports Mermaid natively—do not install the deprecated
+> `bierner.markdown-mermaid` extension.
 
 ---
 
 ## 1. Master workflow: request → track → ready work
 
-![Track selection and specification workflow](assets/complete-workflow/track-selection.png)
+![Track selection and specification workflow](assets/complete-workflow/track-selection.svg)
 
-[Open Mermaid source](assets/complete-workflow/track-selection.mmd)
+[Open scalable SVG](assets/complete-workflow/track-selection.svg) · [Open Mermaid source](assets/complete-workflow/track-selection.mmd) · [PNG fallback](assets/complete-workflow/track-selection.png)
 
 > Flash deliberately stops at local scope in the current trust-threshold model.
 > If a “small” change must alter shipped production code, classify it as **Delta**
@@ -51,9 +53,9 @@ active policies win.
 
 This loop applies to Genesis and Blueprint stories and Delta shards.
 
-![Universal shard delivery and state machine](assets/complete-workflow/delivery-state-machine.png)
+![Universal shard delivery and state machine](assets/complete-workflow/delivery-state-machine.svg)
 
-[Open Mermaid source](assets/complete-workflow/delivery-state-machine.mmd)
+[Open scalable SVG](assets/complete-workflow/delivery-state-machine.svg) · [Open Mermaid source](assets/complete-workflow/delivery-state-machine.mmd) · [PNG fallback](assets/complete-workflow/delivery-state-machine.png)
 
 ### State ownership rule
 
@@ -66,9 +68,9 @@ authority.
 
 ## 3. Release, promotion, rollback, and incident flow
 
-![Release, rollback, incident, and feedback workflow](assets/complete-workflow/release-recovery.png)
+![Release, rollback, incident, and feedback workflow](assets/complete-workflow/release-recovery.svg)
 
-[Open Mermaid source](assets/complete-workflow/release-recovery.mmd)
+[Open scalable SVG](assets/complete-workflow/release-recovery.svg) · [Open Mermaid source](assets/complete-workflow/release-recovery.mmd) · [PNG fallback](assets/complete-workflow/release-recovery.png)
 
 ---
 
