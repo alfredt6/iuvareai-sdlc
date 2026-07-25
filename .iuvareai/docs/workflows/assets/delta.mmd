@@ -1,0 +1,8 @@
+flowchart TD
+    A[Load shipped source, tests, and original story] --> B[Write Delta shard]
+    B --> C{Contract touched?}
+    C -- Yes --> D[Version contract and run contract guard]
+    C -- No --> E[Run DoR]
+    D --> E
+    E --> F[Deliver shard]
+    F --> G[Run existing regression suite]

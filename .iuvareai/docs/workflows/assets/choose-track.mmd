@@ -1,0 +1,8 @@
+flowchart TD
+    A([New work]) --> B{Greenfield, major upgrade, or systemic change?}
+    B -- Yes --> G[Genesis]
+    B -- No --> C{Changes code or behavior already shipped?}
+    C -- Yes --> D[Delta]
+    C -- No --> E{Isolated feature with its own scope?}
+    E -- Yes --> P[Blueprint]
+    E -- No --> F[Flash: small local-only change]

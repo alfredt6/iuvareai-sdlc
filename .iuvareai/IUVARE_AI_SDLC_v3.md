@@ -16,7 +16,7 @@ timestamp: 2026-07-04
 
 ---
 
-> **New operator?** Start with the [Complete Workflow Mermaid maps](docs/complete-workflow.md), then return here for normative rules.
+> **New operator?** Start with the [segmented Workflow Guide](docs/complete-workflow.md), follow only your track, then return here for normative rules.
 
 ## 🔁 Changelog (v3.0 → v3.1)
 

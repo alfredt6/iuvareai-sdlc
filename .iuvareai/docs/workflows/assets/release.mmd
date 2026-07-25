@@ -1,0 +1,10 @@
+flowchart TD
+    A([Story done]) --> B{Track}
+    B -- Flash --> F[Stop at local completion]
+    B -- Delta --> D[Regression green, then human production approval]
+    B -- Blueprint --> P[Staging suite, rollback confirmation, human approval]
+    B -- Genesis --> G[Full regression, staging and NFRs, rollback, Final Gate]
+    D --> Z([Release complete])
+    P --> Z
+    G --> Z
+    F --> Z

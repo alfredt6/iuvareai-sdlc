@@ -46,7 +46,7 @@ iuvareai-sdlc/
 │   ├── index.md                   # bundle root + type vocabulary
 │   ├── agents/      (11 personas) # the WHO — role behaviors
 │   ├── policies/    (5 policies)  # the MUST — enforced rules
-│   ├── docs/        (8 guides)    # the HOW — methodology and workflow maps
+│   ├── docs/                      # the HOW — methodology + focused workflow guides
 │   ├── specs/ stories/ deltas/    # created per project (empty here)
 │   └── sessions/ metrics/         # audit + cost/quality logs
 ├── integrations/pi/               # runnable Pi permission-gate source
@@ -66,7 +66,7 @@ iuvareai-sdlc/
 ## Documentation
 
 - **[The SDLC spec (v3)](.iuvareai/IUVARE_AI_SDLC_v3.md)** — the full blueprint (16 sections)
-- **[Complete Workflow](.iuvareai/docs/complete-workflow.md)** — Mermaid maps and a “what should I do next?” lookup
+- **[Workflow Guide — Start Here](.iuvareai/docs/complete-workflow.md)** — pick one track and follow one short guide at a time
 - **[Install & Reuse](.iuvareai/docs/install.md)** — scaffolding new projects
 - **[OKF Adoption](.iuvareai/docs/okf.md)** / **[OKF Philosophy](.iuvareai/docs/okf-philosophy.md)** — why a format, not docs
 - **[Sharding](.iuvareai/docs/sharding.md)** · **[Definition of Ready](.iuvareai/docs/definition-of-ready.md)** · **[State Machine](.iuvareai/docs/state-machine.md)**

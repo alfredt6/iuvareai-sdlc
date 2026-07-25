@@ -1,0 +1,10 @@
+flowchart TD
+    A[Project Seed] --> B[Analyst: Project Brief]
+    B --> C[PM: PRD]
+    C --> D{Gate 1}
+    D -- Changes --> B
+    D -- Approved --> E[Architect and UX]
+    E --> F[Product Owner: Stories]
+    F --> G{Gate 2}
+    G -- Changes --> E
+    G -- Approved --> H[Deliver first ready story]

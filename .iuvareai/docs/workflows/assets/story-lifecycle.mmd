@@ -1,0 +1,6 @@
+flowchart TD
+    A[draft] -->|DoR passes| B[ready]
+    B -->|Orchestrator assigns| C[in progress]
+    C -->|Implementation complete| D[review]
+    D -->|Gate 3 approved| E[qa]
+    E -->|Required tests green| F[done]

@@ -1,0 +1,12 @@
+flowchart TD
+    A([Problem detected]) --> B{Where did it fail?}
+    B -- DoR --> C[Fix shard specification and return to draft]
+    B -- Review --> D[Developer reworks; max two cycles]
+    B -- QA --> E[Bounded self-heal; max three attempts]
+    B -- Contract --> F[Mark stale and re-ready]
+    B -- Production --> G[Rollback and open Delta fix]
+    C --> H([Resume normal workflow])
+    D --> H
+    E --> H
+    F --> H
+    G --> H

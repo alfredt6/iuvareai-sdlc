@@ -59,8 +59,8 @@ Final Gate human approves production. (spec sections 3 and 5)
 ## Advancing a story
 draft -> ready -> in_progress -> review -> qa -> done (+ blocked / stale).
 Only the Orchestrator writes status; DoR (including implementer write-set fit) must be green before ready.
-See docs/complete-workflow.md for the end-to-end map, then docs/state-machine.md
-and docs/definition-of-ready.md for exact rules.
+Start at docs/complete-workflow.md, choose one focused route, then consult
+state-machine.md and definition-of-ready.md only when that route points there.
 
 ## Start here (first story)
 - Greenfield: fill .iuvareai/specs/PROJECT_SEED.md, then /skill:analyst
