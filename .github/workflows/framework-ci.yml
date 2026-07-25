@@ -1,0 +1,23 @@
+name: framework-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Show Node version
+        run: node --version
+      - name: Test framework and validate OKF bundle
+        run: |
+          node --test framework-tests/*.test.mjs
+          node scripts/okf-conformance.mjs

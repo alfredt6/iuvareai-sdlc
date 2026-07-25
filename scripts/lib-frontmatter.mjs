@@ -13,8 +13,26 @@ export function parseFrontmatterFile(file) {
   return parseFrontmatter(readFileSync(file, "utf8"));
 }
 
-function unquote(s) {
-  return s.replace(/^["']|["']$/g, "").trim();
+function parseScalar(source) {
+  const s = source.trim();
+  const quoted = (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"));
+  if (quoted) return s.slice(1, -1);
+  if (s === "true") return true;
+  if (s === "false") return false;
+  if (s === "null" || s === "~") return null;
+  return s;
+}
+
+function stripInlineComment(source) {
+  let quote = null;
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    if ((ch === '"' || ch === "'") && source[i - 1] !== "\\")
+      quote = quote === ch ? null : quote ?? ch;
+    if (ch === "#" && quote === null && (i === 0 || /\s/.test(source[i - 1])))
+      return source.slice(0, i);
+  }
+  return source;
 }
 
 export function parseYamlLite(src) {
@@ -27,13 +45,13 @@ export function parseYamlLite(src) {
     const kv = line.match(/^([\w-]+):\s*(.*)$/);
     if (!kv) { i++; continue; }
     const key = kv[1];
-    const rest = kv[2].replace(/\s+#.*$/, "").trim(); // strip trailing inline comment
+    const rest = stripInlineComment(kv[2]).trim();
     if (rest === "") {
       // block list?
       const items = [];
       let j = i + 1;
       while (j < lines.length && /^\s+-\s+/.test(lines[j])) {
-        items.push(unquote(lines[j].replace(/^\s+-\s+/, "")));
+        items.push(parseScalar(stripInlineComment(lines[j].replace(/^\s+-\s+/, ""))));
         j++;
       }
       if (items.length) { obj[key] = items; i = j; }
@@ -41,9 +59,9 @@ export function parseYamlLite(src) {
       continue;
     }
     if (rest.startsWith("[") && rest.endsWith("]")) {
-      obj[key] = rest.slice(1, -1).split(",").map(unquote).filter(Boolean);
+      obj[key] = rest.slice(1, -1).split(",").map(parseScalar).filter((v) => v !== "");
     } else {
-      obj[key] = unquote(rest);
+      obj[key] = parseScalar(rest);
     }
     i++;
   }

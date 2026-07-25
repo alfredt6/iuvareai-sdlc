@@ -43,8 +43,8 @@ You work in **Phase 3: Spec-Driven Context-Engineered Development**.
 
 ## Process
 1. **Load the packet** — only the shard, the contract, and the target file(s).
-2. **Verify the contract version** — if it mismatches the shard's
-   `contract_version`, stop and raise it.
+2. **Verify authority + contract** — require `implementer: developer`, confirm
+   every output fits Developer's write set, and stop on a contract mismatch.
 3. **Plan within bounds** — map each `test_criteria` to a change confined to
    the declared `expected_outputs`.
 4. **Implement** — contained edits; no adjacent operational parameters.
@@ -97,5 +97,6 @@ line-by-line before anything is pushed to staging.
   debt.
 - Reviewer rejection notes loop back to you for a maximum of 2 cycles before
   escalation to the human Conductor. Do not silently override a review.
+- Never implement a `conductor` shard or reinterpret `owner` as write authority.
 - When in doubt about scope, ask. A shard that seems to need out-of-bounds
   changes is a signal the shard is wrong — not a license to expand.

@@ -1,12 +1,12 @@
 ---
 type: Specification
-title: "The Iuvare AI SDLC (v3.0)"
+title: "The Iuvare AI SDLC (v3.1)"
 description: "The open AI-driven SDLC blueprint: tracks, phases, personas, gates, and governance."
 tags: [sdlc, specification]
 timestamp: 2026-07-04
 ---
 
-# 📜 THE IUVARE AI SDLC (v3.0)
+# 📜 THE IUVARE AI SDLC (v3.1)
 ### The Open Software Engineering Blueprint for Iuvare AI
 
 > **Canonical version.** This is the single authoritative Iuvare AI SDLC. It
@@ -16,7 +16,20 @@ timestamp: 2026-07-04
 
 ---
 
-## 🔁 Changelog (v2 → v3)
+## 🔁 Changelog (v3.0 → v3.1)
+
+**Greenfield implementability hardening (v3.1):**
+- Shards now name immutable `implementer` separately from mutable workflow
+  `owner`; DoR checks all outputs against that one authority's live `writes_to`.
+- Genesis has a narrow, explicit human Conductor bootstrap path for mandatory
+  repository-root toolchain files—without widening Developer permissions.
+- Architecture and sharding must define repository layout, bootstrap ownership,
+  permission-fit, and source-backed Delta inputs before implementation.
+- Pi activation installs a runnable fail-closed permission gate; OS isolation
+  remains mandatory for production-adjacent shell execution.
+- Framework validator/installer regressions run in CI.
+
+## Earlier changelog (v2 → v3.0)
 
 > **📦 OKF adoption (post-v3):** The `.iuvareai/` tree is now an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) v0.1 bundle. Every knowledge concept carries a `type` field; `index.md` manifests enable progressive disclosure; `scripts/okf-conformance.mjs` validates the bundle. Iuvare-specific fields ride as producer extensions. See [docs/okf.md](docs/okf.md).
 
@@ -121,7 +134,7 @@ Four tracks match process weight to risk. **🆕 v3 maps each track to a *trust 
 
 - **Personas:** Technical Architect (stack, data flow, models) · Product Owner (shards the PRD).
 - **Commands:** `*model-system {prd_file}` · `*shard-epics {prd_file}`
-- **Artifacts:** `ARCHITECTURE.md` · `DATAMODEL_CONTRACT.md` (semver-tagged) · `stories/{epic}.{story}.{title}.md`
+- **Artifacts:** `ARCHITECTURE.md` (including Repository Layout & Bootstrap Ownership) · `DATAMODEL_CONTRACT.md` (semver-tagged) · `stories/{epic}.{story}.{title}.md`
 - **🚫 Gate 2:** Manual verification of schema + integration design. Global interface changes ⇒ **semver-MAJOR** contract bump.
 
 ### 🆕 Phase 2b — Definition of Ready (between sharding and coding)
@@ -171,13 +184,25 @@ Every story shard must pass the **DoR checklist (§8)** — automated via CI —
 ## 🔒 SECTION 5: Cross-Cutting Governance Layers
 
 ### 5.1 Agent Sandboxing & Permission Boundaries
-**🆕 v3 requires a concrete enforcement mechanism, not just a written policy** (v2's admitted biggest gap). Pick one, in order of weight:
+**v3.1 requires layered enforcement, not just a written policy:**
 
-1. **Containerize the whole harness (Docker) — recommended day one.** Mount only `src/`, `tests/`, and the specific `.iuvareai/` artifacts the active persona needs. Read-only mount the contract; read-write only the persona's `writes_to` set.
-2. **Micro-VM extension** — worth it only once agents touch real customer data.
-3. **Explicit signed-risk acceptance** — document the blast radius if you run un-contained; never default to this for production-adjacent work.
+1. **DoR** proves all outputs fit one named implementation authority.
+2. **Harness interception** blocks direct tool calls outside the active persona and
+   shard (the Pi integration ships with the template).
+3. **OS isolation** contains shell/process behavior: Docker at minimum, micro-VM
+   when agents touch sensitive or production-adjacent systems. Mount only declared
+   write paths read-write and required inputs read-only.
+4. **Explicit signed-risk acceptance** documents blast radius only for
+   non-production experimentation; it is never a substitute for isolation in
+   production-adjacent work.
 
-**Required policy (`policies/sandbox.md`):** per-persona `writes_to`/`reads_from` sets (mirrored in each persona file's frontmatter), bash allow-lists per track, and the global context-exclusion list (`.env`, credentials, PII fixtures — never in any context packet, any track).
+**Required policy (`policies/sandbox.md`):** per-persona `writes_to`/`reads_from` sets in persona frontmatter, DoR permission-fit against one immutable shard `implementer`, bash allow-lists per track, and the global context-exclusion list (`.env`, credentials, PII fixtures — never in any context packet, any track). Pi activation installs a fail-closed direct-tool gate, but shell safety still requires the container/micro-VM boundary.
+
+**Genesis root bootstrap:** mandatory repository-root manifests/config are a
+reasoned human Conductor action (`implementer: conductor`, `bootstrap: true`),
+not a Developer permission exception. Root outputs are declared exhaustively and
+still pass review/QA. Repository-root `docs/` likewise needs an explicit custom
+persona or a separate Conductor shard; it is not `.iuvareai/docs/`.
 
 ### 5.2 Budget & Quota Governance
 **Unit of budget = weighted quota for subscriptions; dollars for API overflow**
@@ -272,8 +297,9 @@ story_id: 003
 track: blueprint
 contract_version: "1.4.0"
 status: ready            # 🆕 draft | ready | in_progress | review | qa | done | blocked | stale
-owner: developer         # 🆕 persona currently responsible
-depends_on: [001.002]    # 🆕 story_ids that must be 'done' first
+owner: developer         # mutable persona currently responsible
+implementer: developer   # immutable implementation authority; all outputs fit its writes_to
+depends_on: [001.002]    # story_ids that must be 'done' first
 dor_checked_at: 2026-07-03T10:00Z  # 🆕 last CI DoR pass
 inputs:
   - src/auth/login.ts
@@ -293,6 +319,11 @@ max_self_heal_attempts: 3
 [Prose: constraints, edge cases, things to avoid]
 ```
 
+For a human-only project artifact, set `implementer: conductor` and a non-empty
+`conductor_reason`. Repository-root output additionally requires an explicit
+boolean `bootstrap`: `true` only for Genesis setup, `false` for later root
+maintenance. `owner` may change through review/QA; `implementer` does not.
+
 ### 7.2 Delta shard
 ```markdown
 ---
@@ -309,13 +340,19 @@ contract_version: "1.4.0"
 contract_touched: false  # 🆕 true forces a semver bump
 status: ready
 owner: developer
+implementer: developer
 depends_on: []
 dor_checked_at: 2026-07-03T10:00Z
+inputs:
+  - src/auth/rate_limiter.ts       # every existing modified file is source-backed
 target_files:
   - src/auth/rate_limiter.ts
 expected_outputs:
   - src/auth/rate_limiter.ts
   - tests/auth/rate_limit.regression.test.ts
+test_criteria:
+  - "sixth login attempt within 60 seconds is rejected"
+  - "existing authentication regression suite remains green"
 ---
 
 ## What's changing
@@ -334,13 +371,19 @@ expected_outputs:
 - [ ] `status` is set and transitions are legal per §9.
 - [ ] `contract_version` is **compatible** with the current `DATAMODEL_CONTRACT.md` major.
 - [ ] Every `inputs` path **exists** in the repo.
-- [ ] Every `expected_outputs` path is **declared** (target files known up front).
+- [ ] Every `expected_outputs` path is **declared**, safe, repository-relative, and writable by the one named `implementer`.
 - [ ] `test_criteria` is **non-empty** and each criterion is **testable** (a human/agent can say how to verify it).
 - [ ] Every `depends_on` story is in status `done`.
 - [ ] `track` is set and matches the work's risk level.
-- [ ] For Delta: `delta_type` and `contract_touched` are set.
+- [ ] For Delta: `delta_type` and boolean `contract_touched` are set; every existing modified source/test file appears in `inputs`.
+- [ ] Repository-root output is reasoned human Conductor work with explicit boolean `bootstrap`; `true` is Genesis-only.
 
-> **Why this exists:** v2's thesis was "discipline upstream so debt isn't amplified at machine speed" — but v2 only disciplined *code*, leaving specs to a human sign-off. DoR is the cheap, automatable gate that makes the thesis actually hold.
+> **Automation boundary:** CI validates structural startability (schema, paths,
+> versions, dependencies, permission-fit). Gate 2 remains accountable for
+> semantic testability, risk-track selection, and whether outputs are sufficient
+> to satisfy acceptance criteria.
+>
+> **Why this exists:** v2's thesis was "discipline upstream so debt isn't amplified at machine speed" — but v2 only disciplined *code*, leaving specs to a human sign-off. DoR is the cheap structural gate, paired with Gate 2 semantics, that makes the thesis actually hold.
 
 ---
 
@@ -386,8 +429,11 @@ Sharding is the art of this whole method. Bad shards = context bloat *or* orches
 5. **Single-phase ownership.** Exactly one persona authors a shard (usually the Product Owner).
 6. **AC traces to the PRD.** Each `test_criteria` maps to a PRD requirement; orphan criteria are scope creep.
 7. **Context-fit.** A shard's `inputs` must fit the target agent's context window alongside the contract. If not, split.
+8. **Permission-fit.** Every output fits one named `implementer`; split mixed-authority work.
+9. **Bootstrap explicitly.** Greenfield's first story accounts for toolchain prerequisites; root config is a Genesis Conductor bootstrap.
+10. **Source-back modifications.** Delta/brownfield inputs include every existing modified source/test file.
 
-**Anti-patterns to reject:** "and also..." shards (multiple behaviors), mega-shards ("implement auth" — break it down), and contractless shards (no `contract_version`).
+**Anti-patterns to reject:** "and also..." shards (multiple behaviors), mega-shards ("implement auth" — break it down), contractless shards, permission lotteries, and phantom toolchains.
 
 ---
 
@@ -468,8 +514,10 @@ mallengke-platform/
 │       ├── definition-of-ready.md
 │       ├── state-machine.md
 │       └── environments.md
-├── src/
-├── tests/
+├── docs/                         # project docs; explicit custom persona/Conductor ownership
+├── src/                          # Developer write set
+├── tests/                        # Developer/TEA/QA write sets by phase
+├── package.json                  # example Genesis Conductor bootstrap output
 └── README.md
 ```
 
@@ -500,11 +548,11 @@ Use this to evaluate *any* agent SDLC (yours, BMAD, the next thing). v3's curren
 
 > Examples below use **Pi** as the reference harness. Other harnesses (Claude Code, Cursor, OpenAI Codex) have analogous mechanisms — adapt accordingly.
 
-Pi ships four built-in tools, no sub-agents, no plan mode, no permission system. v3 maps to Pi as follows:
+Pi ships built-in tools but no Iuvare-aware permission model. v3.1 maps to Pi as follows:
 
 1. **Personas → Pi skills**, loaded on demand (only the active-phase persona in context).
 2. **Sub-agents** need an extension for true separate context windows (documented Pi pattern).
-3. **Permission gates / sandboxing (§5.1)** must be enforced by containerizing the harness (Docker) or an extension — Pi won't do it. **v3 makes this a requirement, not a recommendation.**
+3. **Permission gates / sandboxing (§5.1):** `activate-pi-skills.mjs` installs the Iuvare direct-tool gate. Select `/iuvare-persona`, bind implementation with `/iuvare-story`, and still containerize shell execution. **These are requirements, not recommendations.**
 4. **Session logs are already JSONL** — add a post-story step that copies them to `.iuvareai/sessions/` and writes a `.iuvareai/metrics/` entry.
 5. **DoR + CI checks (§11)** are ordinary CI jobs reading shard frontmatter — no Pi magic required.
 6. **MCP** is available but not default-on; wire it only when a phase needs external data.
@@ -524,4 +572,5 @@ Don't adopt v3 all at once. Recommended sequence:
 
 ---
 
-*v3.0 — drafted for review. Each 🆕 section is a candidate for deeper scrutiny before this becomes the permanent SDLC.*
+*v3.1 — implementability-hardened. Structural controls are regression-tested;
+project deployment controls and human gates remain the adopter's responsibility.*

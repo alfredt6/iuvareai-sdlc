@@ -7,11 +7,13 @@
 // script is the Pi-specific activation layer. Re-run it whenever you edit a persona.
 //
 // Usage: node scripts/activate-pi-skills.mjs
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
+import { copyFileSync, readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const SRC = ".iuvareai/agents";
 const OUT = ".pi/skills";
+const EXTENSION_SRC = "integrations/pi/iuvareai-sandbox.ts";
+const EXTENSION_OUT = ".pi/extensions/iuvareai-sandbox.ts";
 
 if (!existsSync(SRC)) {
   console.error(`✗ no persona source at ${SRC} (run from the project root)`);
@@ -56,7 +58,7 @@ Final Gate human approves production. (spec sections 3 and 5)
 
 ## Advancing a story
 draft -> ready -> in_progress -> review -> qa -> done (+ blocked / stale).
-Only the Orchestrator writes status; DoR must be green before ready.
+Only the Orchestrator writes status; DoR (including implementer write-set fit) must be green before ready.
 See docs/state-machine.md and docs/definition-of-ready.md.
 
 ## Start here (first story)
@@ -65,7 +67,8 @@ See docs/state-machine.md and docs/definition-of-ready.md.
 - Brownfield (existing code, no brief): /skill:analyst reverse-engineers the
   brief from the codebase (asks first).
 Then Gate 1 -> /skill:pm (PRD) -> /skill:architect + /skill:ux-designer ->
-/skill:product-owner (stories) -> Phase 3.
+/skill:product-owner (stories) -> Phase 3. Genesis architecture must assign the
+one-time root toolchain bootstrap to the human Conductor before source stories.
 
 When in doubt, defer to .iuvareai/IUVARE_AI_SDLC_v3.md — this map is a pointer,
 not the source of truth.
@@ -106,7 +109,16 @@ writeFileSync(join(OUT, "iuvareai-sdlc.md"), ORIENTATION_SKILL);
 report.push(`  ✓ iuvareai-sdlc        orientation map (start here — routes phases to personas)`);
 count++;
 
+if (!existsSync(EXTENSION_SRC)) {
+  console.error(`✗ missing Pi sandbox integration at ${EXTENSION_SRC}`);
+  process.exit(1);
+}
+mkdirSync(join(".pi", "extensions"), { recursive: true });
+copyFileSync(EXTENSION_SRC, EXTENSION_OUT);
+
 console.log(`Activated ${count} skill(s) into ${OUT}/ (11 personas + 1 orientation):\n`);
 console.log(report.join("\n"));
-console.log(`\nIn Pi: skills auto-match by description, or force-load with \`/skill:<name>\`.`);
-console.log(`Re-run this script after editing any persona in ${SRC}/.`);
+console.log(`  ✓ iuvareai-sandbox  ${EXTENSION_OUT} (fail-closed permission gate: persona + outputs)`);
+console.log(`\nIn Pi: select a persona with \`/iuvare-persona <name>\`, then bind implementation with \`/iuvare-story <shard>\`.`);
+console.log(`Skills auto-match by description, or force-load with \`/skill:<name>\`.`);
+console.log(`Re-run this script after editing any persona in ${SRC}/ or the Pi integration.`);

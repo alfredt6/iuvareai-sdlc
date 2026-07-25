@@ -21,7 +21,7 @@ OKF requires exactly one field — `type`. Iuvare defines these values:
 | `Policy` | an enforced governance rule | `policies/` |
 | `Methodology` | a procedural reference | `docs/` |
 
-Iuvare-specific fields (`status`, `owner`, `contract_version`, `depends_on`, `delta_type`, …) ride as **producer extensions**; OKF consumers preserve unknown keys (spec §9).
+Iuvare-specific fields (`status`, `owner`, `implementer`, `contract_version`, `depends_on`, `delta_type`, …) ride as **producer extensions**; OKF consumers preserve unknown keys (spec §9).
 
 ## Manifest
 

@@ -5,9 +5,9 @@ description: "Pipeline stages: DoR check, contract-guard, quality, regression, i
 tags: [policy, governance, ci]
 timestamp: 2026-07-04
 policy: ci
-version: 1.0.0
+version: 1.1.0
 status: active
-last_updated: 2026-07-03
+last_updated: 2026-07-25
 applies_to: [genesis, blueprint, delta, flash]
 enforces: ["SDLC v3 §11.3", "Definition of Ready §8", "Contract Versioning §5.4", "Environments §12"]
 ---
@@ -31,7 +31,7 @@ branches and PRs.
 
 | Stage | Trigger | Runs | Blocks |
 |---|---|---|---|
-| **DoR check** | PR open / push | Shard frontmatter validation, contract-version compat, input existence, testable criteria | ✅ merge |
+| **DoR check** | PR open / push | Schema/path validation, contract/input/dependency checks, implementer write-set fit | ✅ merge |
 | **Contract-guard** | any change to `DATAMODEL_CONTRACT.md` | All open shards still compatible? else flag `stale` | ✅ merge |
 | **Quality** | PR open / push | Lint, typecheck, unit tests | ✅ merge |
 | **Regression** | merge → `main` | Full regression suite (Delta: the **existing** suite) | ✅ deploy |
@@ -58,62 +58,37 @@ These **must** be green before `main` accepts a merge (see `vcs.md` §3):
 Implements the **Definition of Ready** (SDLC §8) as code. Inputs: the PR's shard
 path (from the `[shard: ...]` citation, with branch-name fallback). It verifies:
 
-1. **`status`** is set and a legal transition (per §9).
-2. **`contract_version`** major **matches** the current `DATAMODEL_CONTRACT.md`
-   major (see §4 for the rule).
-3. **Every `inputs` path exists** in the repo.
-4. **`expected_outputs`** is non-empty (target files known up front).
-5. **`test_criteria`** is non-empty and each entry is a testable statement.
-6. **Every `depends_on`** story is in status `done`.
-7. **`track`** is set; for Delta: `delta_type` and `contract_touched` are set.
+1. **`status`** is a known state-machine value.
+2. **`contract_version`** is strict semver and its major matches the current
+   `DATAMODEL_CONTRACT.md` major.
+3. **`inputs`** is a list of safe, existing repository-relative paths; Delta
+   includes every existing modified source/test file.
+4. **`expected_outputs`** is a non-empty list of safe repository-relative paths.
+5. **`test_criteria`** is a non-empty list of statements (semantic testability is
+   confirmed at Gate 2).
+6. **Every `depends_on`** shard exists and is `done`.
+7. **`track`** is valid; Delta fields are valid and correctly typed.
+8. **`implementer`** names one persona whose `writes_to` contains every output,
+   or a reasoned human Conductor action.
+9. **Root writes** are Conductor-only with explicit boolean `bootstrap`; `true`
+   is restricted to Genesis.
 
-**On failure:** the story cannot reach `ready`; the Orchestrator returns it to
-`draft`. The check prints the specific failing rule, never a generic "failed."
+**On failure:** the shard cannot be assigned; the Orchestrator returns it to
+`draft`. The check prints every failing rule in one run.
 
-### Reference script (`scripts/dor-check.mjs`)
-```js
-import { readFileSync, existsSync } from "node:fs";
-import yaml from "js-yaml"; // npm i js-yaml
+### Canonical implementation
 
-const shardPath = process.env.SHARD_PATH; // from PR citation
-if (!shardPath || !existsSync(shardPath)) {
-  console.error(`✗ DoR: shard path missing or not found: ${shardPath}`);
-  process.exit(1);
-}
+Do not copy validator code into CI documentation or workflow YAML. Invoke the
+version-controlled source of truth:
 
-// 1. Parse shard frontmatter
-const text = readFileSync(shardPath, "utf8");
-const fm = text.match(/^---\n([\s\S]*?)\n---/);
-if (!fm) fail("no YAML frontmatter");
-const s = yaml.load(fm[1]);
-
-// 2. Contract-version compatibility (MAJOR must match)
-const contractVer = readFileSync(".iuvareai/specs/DATAMODEL_CONTRACT.md", "utf8")
-  .match(/^#\s*version:\s*(\d+)\./m)?.[1];
-const shardMajor = String(s.contract_version).split(".")[0];
-if (contractVer !== shardMajor)
-  fail(`contract major mismatch: shard ${shardMajor} vs contract ${contractVer}`);
-
-// 3. Inputs exist
-for (const p of s.inputs ?? []) if (!existsSync(p)) fail(`missing input: ${p}`);
-
-// 4. expected_outputs declared
-if (!s.expected_outputs?.length) fail("expected_outputs empty");
-
-// 5. test_criteria present + testable
-if (!s.test_criteria?.length) fail("test_criteria empty");
-
-// 6. depends_on all done (simplified — read each dep shard's status)
-for (const dep of s.depends_on ?? []) {
-  const depStatus = readStatus(dep); // your helper
-  if (depStatus !== "done") fail(`dependency ${dep} not done (${depStatus})`);
-}
-
-console.log(`✓ DoR passed for ${shardPath}`);
-process.exit(0);
-
-function fail(msg) { console.error(`✗ DoR: ${msg}`); process.exit(1); }
+```bash
+SHARD_PATH=.iuvareai/stories/001.003.example.md node scripts/dor-check.mjs
+# or
+node scripts/dor-check.mjs .iuvareai/stories/001.003.example.md
 ```
+
+The script is dependency-free and shares permission/path logic with harness
+integrations. Regression coverage lives under `tests/`.
 
 ---
 
@@ -126,8 +101,11 @@ When a PR touches `.iuvareai/specs/DATAMODEL_CONTRACT.md`:
   contract's MAJOR.
   - **Same MAJOR → compatible** (MINOR/PATCH differences are safe; the contract
     only breaks across MAJOR bumps, per §5.4).
-  - **Different MAJOR → incompatible** → that shard is auto-flagged `stale` and
-    its PR is blocked until the shard is re-readied against the new contract.
+  - **Different MAJOR → incompatible** → that open shard must be `stale` before
+    the contract change can merge. The automatic transition is:
+    `node scripts/contract-guard.mjs --write`; review and commit the resulting
+    shard-state changes with the contract bump. Default check mode never mutates.
+  - `done` shards are historical and are not rewritten.
 
 This is the mechanism that stops a stale story from silently generating code
 against an outdated schema — the crown-jewel guarantee of the whole framework.
@@ -229,7 +207,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: node scripts/contract-guard.mjs   # flags stale shards
+      - run: node scripts/contract-guard.mjs   # verifies incompatible open shards are already stale
 
   quality:
     if: github.event_name == 'pull_request'

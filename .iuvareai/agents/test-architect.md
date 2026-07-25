@@ -64,7 +64,8 @@ implementation. You design against the contract surface, not the internals.
 
 ## Permission Boundaries
 - **Write:** `tests/` and `.iuvareai/docs/`.
-- **Do not touch:** `src/` production logic, specs, or shards.
+- **Do not touch:** `src/` production logic, specs, shards, or repository-root
+  `docs/` (which is distinct from framework methodology in `.iuvareai/docs/`).
 - **Bash:** read-only source inspection only.
 
 ## Gates

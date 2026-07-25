@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OKF](https://img.shields.io/badge/Open%20Knowledge%20Format-v0.1-blue.svg)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-[![SDLC](https://img.shields.io/badge/SDLC-v3.0-purple.svg)](.iuvareai/IUVARE_AI_SDLC_v3.md)
+[![SDLC](https://img.shields.io/badge/SDLC-v3.1-purple.svg)](.iuvareai/IUVARE_AI_SDLC_v3.md)
 
 **Iuvare AI SDLC** is a spec-driven, gate-enforced framework for building software with AI coding agents — Pi, Claude Code, Cursor, or OpenAI Codex. It moves engineering discipline *upstream* into precise specs, versioned data contracts, and automated gates, so fast agents don't accumulate technical debt at machine speed.
 
@@ -32,10 +32,10 @@ node /tmp/iuvareai/scripts/iuvareai-init.mjs /path/to/existing-project
 ```
 
 Then activate the persona skills per-project:
-- **Pi:** `node scripts/activate-pi-skills.mjs` (generates `.pi/skills/` from `.iuvareai/agents/`).
+- **Pi:** `node scripts/activate-pi-skills.mjs` (generates `.pi/skills/` and installs the fail-closed `.pi/extensions/iuvareai-sandbox.ts` permission gate). Select `/iuvare-persona <name>` and, for implementation, `/iuvare-story <shard-path>`.
 - **Claude Code / Cursor:** copy `.iuvareai/agents/*.md` into `.claude/skills/` or `.cursor/skills/`.
 
-Then wire CI and build the sandbox extension. See **[Install & Reuse](.iuvareai/docs/install.md)**.
+Then wire project CI and add OS isolation; Pi's direct-tool permission gate is installed by the activation command. See **[Install & Reuse](.iuvareai/docs/install.md)**.
 
 ## What's inside
 
@@ -49,7 +49,9 @@ iuvareai-sdlc/
 │   ├── docs/        (6 guides)    # the HOW — methodology
 │   ├── specs/ stories/ deltas/    # created per project (empty here)
 │   └── sessions/ metrics/         # audit + cost/quality logs
-└── scripts/                       # conformance, DoR, contract-guard, init, skills-activation
+├── integrations/pi/               # runnable Pi permission-gate source
+├── scripts/                       # conformance, DoR, contract-guard, init, activation
+└── tests/                         # framework regression suite
 ```
 
 ## Core ideas
@@ -69,15 +71,22 @@ iuvareai-sdlc/
 - **[Sharding](.iuvareai/docs/sharding.md)** · **[Definition of Ready](.iuvareai/docs/definition-of-ready.md)** · **[State Machine](.iuvareai/docs/state-machine.md)**
 - Policies: **[VCS](.iuvareai/policies/vcs.md)** · **[CI](.iuvareai/policies/ci.md)** · **[Budget](.iuvareai/policies/budget.md)** · **[Sandbox](.iuvareai/policies/sandbox.md)** · **[Secrets](.iuvareai/policies/secrets.md)**
 
+## Framework verification
+
+```bash
+node --test framework-tests/*.test.mjs
+node scripts/okf-conformance.mjs
+```
+
 ## Requirements
 
-- **Node.js** (for the scripts — stdlib only, no dependencies)
+- **Node.js 20+** (for the scripts — stdlib only, no runtime dependencies)
 - **Any agent harness** — Pi, Claude Code, Cursor, or OpenAI Codex
 - **Git**
 
 ## Status
 
-v3.0 — documentation layer complete and OKF-conformant. Activation layer (harness skills, sandbox extension, CI wiring) is applied per-project. See the [Adoption Roadmap](.iuvareai/IUVARE_AI_SDLC_v3.md) (§16).
+v3.1 — implementability hardening and framework regression tests are complete. Pi's direct-tool permission gate ships with activation. Production-adjacent adopters must still provide OS isolation, branch protection, secret scanning, environment approvals, and rollback controls described by the policies. See the [framework audit](docs/FRAMEWORK_AUDIT_2026-07-25.md).
 
 ## License
 
@@ -85,4 +94,4 @@ v3.0 — documentation layer complete and OKF-conformant. Activation layer (harn
 
 ## Contributing
 
-Issues and pull requests welcome. This is an open standard-in-progress; the OKF bundle version (`okf_version` in [`.iuvareai/index.md`](.iuvareai/index.md)) and the SDLC version track compatibility.
+Issues and pull requests are welcome. This is an open standard-in-progress; changes must preserve OKF conformance and declare any SDLC schema compatibility impact.

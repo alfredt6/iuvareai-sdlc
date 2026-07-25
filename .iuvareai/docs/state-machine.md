@@ -18,7 +18,8 @@ references: ["SDLC v3 §9", "VCS branch lifecycle (vcs.md §7)", "CI state trans
 Make a story's lifecycle **deterministic**: at any moment you can point at a
 story and know exactly where it is, who owns it, and what may happen next.
 Without this, two agents grab the same story, interrupted work is unrecoverable,
-and "is this done?" becomes a guess.
+and "is this done?" becomes a guess. `owner` is mutable workflow custody;
+`implementer` is immutable write authority selected during sharding.
 
 > **Analogy: a Kanban board with enforced rules.** Cards (stories) move across
 > columns (states), but you can't drag them freely — each move has a *condition*
@@ -38,7 +39,7 @@ draft → ready → in_progress → review → qa → done
 |---|---|
 | `draft` | Shard exists but isn't startable yet (DoR not passed). |
 | `ready` | DoR green; eligible to be assigned. |
-| `in_progress` | An owner is implementing it. Exactly one owner. |
+| `in_progress` | One owner is acting under the shard's declared `implementer` authority. |
 | `review` | PR open; Gate 3 (human diff review) pending. |
 | `qa` | Gate 3 approved; QA/CI verifying. |
 | `done` | DoD met (tests green, Gate 3 recorded, merged). Deployable. |

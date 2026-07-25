@@ -5,9 +5,9 @@ description: "Atomicity rules, granularity heuristics, the sharding process, and
 tags: [methodology, sharding]
 timestamp: 2026-07-04
 doc: sharding
-version: 1.0.0
+version: 1.1.0
 status: active
-last_updated: 2026-07-03
+last_updated: 2026-07-25
 audience: [product-owner, architect, orchestrator]
 references: ["SDLC v3 §10", "Definition of Ready §8", "Contract Versioning §5.4"]
 ---
@@ -30,7 +30,7 @@ shards guarantee context bloat, scope drift, and merge pain.
 one thing you can point to and say "this works" or "this is broken." If you
 can't, it's two shards hiding as one.
 
-## The seven rules
+## The ten rules
 
 1. **One shard = one verifiable behavior change.** Two independently-testable
    outcomes ⇒ split. *Smell:* the title has "and" in it.
@@ -47,6 +47,17 @@ can't, it's two shards hiding as one.
    requirement. Orphans are scope creep — reject them.
 7. **Context-fit.** A shard's `inputs` must fit the target agent's context
    window *alongside the contract*. If not, split the shard, not the window.
+8. **Permission-fit.** Name one immutable `implementer`; every
+   `expected_output` must fit that persona's `writes_to`. Mixed-authority output
+   sets are split into separate shards. A human-only shard uses
+   `implementer: conductor` with a reason.
+9. **Bootstrap explicitly.** The first story of a greenfield repository accounts
+   for its package/build/test prerequisites. Repository-root outputs are a
+   Genesis Conductor bootstrap (`bootstrap: true`), never an implicit Developer
+   exception.
+10. **Modification inputs are source-backed.** Delta and other brownfield shards
+    list every existing modified `src/`/`tests/` file in `inputs`, not only in
+    `expected_outputs`.
 
 ## Granularity: how to know it's right
 
@@ -66,12 +77,15 @@ small.
 1. **Read the PRD + current contract version** — the contract version is your
    anchor; every shard will cite it.
 2. **List distinct testable behaviors** implied by the requirements.
-3. **Apply the seven rules** — split anything composite, drop anything
+3. **Apply the ten rules** — split anything composite, drop anything
    untraceable to the PRD.
 4. **Draft each shard** — full frontmatter (`epic_id`, `story_id`,
    `contract_version`, `inputs`, `expected_outputs`, `test_criteria`,
-   `depends_on`, `status: draft`) + Context/Implementation prose.
-5. **Self-check DoR** — inputs exist? criteria testable? deps known?
+   `depends_on`, `implementer`, `status: draft`) + Context/Implementation prose.
+   For greenfield work, start from the Architecture's repository-layout and
+   bootstrap-ownership section; do not assume a toolchain already exists.
+5. **Self-check DoR** — inputs exist? criteria testable? dependencies known? all
+   outputs fit the named implementer?
 6. **Emit** to `.iuvareai/stories/{epic}.{story}.{title}.md`.
 
 ## Worked example: epic "User Authentication"
@@ -100,6 +114,10 @@ citing the same `contract_version`. `001.003 depends_on: [001.002]`.
 - **Bundle shard:** two behaviors glued together ("and also…").
 - **Implementation-detail shard:** too small to be a behavior (a single function
   rename) — fold it into its parent behavior.
+- **Permission lottery:** outputs happen to fit several personas collectively but
+  no single implementer can write all of them — split by authority.
+- **Phantom toolchain:** the first application story assumes manifests, compiler,
+  test runner, or directories that no earlier shard creates.
 
 ## How sharding ties to the rest
 - **DoR (§8):** a shard must be DoR-passable to reach `ready`. Sharding that
