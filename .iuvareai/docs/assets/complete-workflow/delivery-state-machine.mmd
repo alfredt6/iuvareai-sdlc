@@ -1,0 +1,51 @@
+flowchart TD
+    DRAFT([draft]) --> APPROVALS{Required human scope and<br/>design gates recorded?}
+    APPROVALS -- No --> WAIT[Stop and obtain the required gate]
+    WAIT --> DRAFT
+    APPROVALS -- Yes --> DOR[Run scripts/dor-check.mjs]
+
+    DOR --> DORPASS{DoR green?<br/>schema, paths, dependencies,<br/>contract, criteria, permission-fit}
+    DORPASS -- No --> AUTHOR[Return to Product Owner or shard author<br/>with every reported failure]
+    AUTHOR --> DRAFT
+    DORPASS -- Yes --> READY[Orchestrator records ready]
+
+    READY --> ROUTE{All outputs fit the one<br/>declared implementer?}
+    ROUTE -- No --> AUTHOR
+    ROUTE -- Human Conductor --> HUMAN[Route explicitly to human<br/>reason and bootstrap classification required]
+    ROUTE -- Agent persona --> ASSIGN[Select active persona and bind shard<br/>Pi: /iuvare-persona and /iuvare-story]
+
+    HUMAN --> ACTIVE[in_progress<br/>single owner]
+    ASSIGN --> ACTIVE
+    ACTIVE --> IMPLEMENT[Implement only declared outputs<br/>under contract and sandbox]
+    IMPLEMENT --> LOCAL{Local build, lint,<br/>typecheck, and tests green?}
+    LOCAL -- No, budget remains --> IMPLEMENT
+    LOCAL -- Budget ceiling hit --> BLOCKED[blocked]
+    LOCAL -- Yes --> REVIEW[review<br/>Code Reviewer checks security,<br/>dependencies, contract, containment]
+
+    REVIEW --> G3{Gate 3<br/>human line-by-line diff review}
+    G3 -- Rejected, cycle 1 or 2 --> ACTIVE
+    G3 -- Third dispute --> CONFLICT[Escalate to human Conductor]
+    CONFLICT -- Rework approved --> ACTIVE
+    CONFLICT -- Cannot resolve --> BLOCKED
+    G3 -- Approved --> QA_STATE[qa]
+
+    QA_STATE --> TEA[Test Architect creates edge-case matrix<br/>for Genesis and Blueprint]
+    TEA --> QA[QA runs track-required tests<br/>with synthetic or sanitized data]
+    QA --> QARESULT{Tests green?}
+    QARESULT -- Yes --> DOD[Orchestrator verifies DoD,<br/>archives session and metrics]
+    DOD --> DONE([done])
+
+    QARESULT -- No --> ATTEMPTS{Self-heal attempts used<br/>less than 3?}
+    ATTEMPTS -- Yes --> PACKET[Issue one bounded failure packet<br/>expected, observed, attempt number]
+    PACKET --> ACTIVE
+    ATTEMPTS -- No --> BLOCKED
+
+    BLOCKED --> REMEDIATE{Release Manager and human<br/>choose remediation}
+    REMEDIATE -- Bounded fix authorized --> ACTIVE
+    REMEDIATE -- Abandon or re-scope --> DRAFT
+
+    CONTRACT[Contract MAJOR becomes incompatible] -. any pre-done shard .-> STALE[stale]
+    STALE --> REREADY[Update contract_version, inputs,<br/>outputs, and criteria]
+    REREADY --> DRAFT
+
+    DONE --> RELEASE([Enter track-specific release flow])

@@ -1,0 +1,66 @@
+flowchart TD
+    START([Work request, product idea, incident, or change]) --> INSTALLED{Framework installed<br/>and current?}
+
+    INSTALLED -- No --> INSTALL[Install or upgrade from canonical template]
+    INSTALL --> CONFORM[Run OKF conformance]
+    CONFORM --> ACTIVATE[Activate persona skills and harness permission gate]
+    ACTIVATE --> ISOLATE[Enable container or micro-VM isolation<br/>and project CI controls]
+    ISOLATE --> CLASSIFY
+    INSTALLED -- Yes --> CLASSIFY{Choose the lowest-risk track<br/>that safely contains the work}
+
+    CLASSIFY -- Small local hotfix<br/>or UI tweak --> FLASH
+    CLASSIFY -- Change to shipped code --> DELTA
+    CLASSIFY -- Isolated feature<br/>or extension --> BLUEPRINT
+    CLASSIFY -- Greenfield, major upgrade,<br/>or systemic change --> GENESIS
+
+    subgraph FT[Flash track]
+        direction TB
+        FLASH[Write TECH_SPEC.md] --> FIMPL[Human Conductor implements<br/>inside the bounded spec]
+        FIMPL --> FTEST[Run focused local and unit tests]
+        FTEST -- Fail --> FIMPL
+        FTEST -- Green --> FG3{Gate 3<br/>human diff review}
+        FG3 -- Changes --> FIMPL
+        FG3 -- Approved --> FEND([Flash complete at local scope])
+    end
+
+    subgraph DT[Delta track]
+        direction TB
+        DELTA[Load shipped source, tests,<br/>and original shard if available] --> DSHARD[Create DELTA_SHARD.md<br/>delta_type, contract_touched,<br/>inputs, outputs, criteria]
+        DSHARD --> DCONTRACT{Data contract touched?}
+        DCONTRACT -- Yes --> DBUMP[Architect versions contract<br/>and runs contract guard]
+        DBUMP --> DSTALE[Incompatible open shards become stale<br/>and must be re-readied]
+        DSTALE --> DDRAFT[Delta status: draft]
+        DCONTRACT -- No --> DDRAFT
+    end
+
+    subgraph BT[Blueprint track]
+        direction TB
+        BLUEPRINT[Create PRD_SHARD and API contract] --> BG1{Gate 1<br/>scope approved?}
+        BG1 -- Changes --> BLUEPRINT
+        BG1 -- Approved --> BDESIGN[Architect and UX define affected<br/>interfaces, flow, and design]
+        BDESIGN --> BG2{Gate 2 required?<br/>schema or integration changed}
+        BG2 -- Changes --> BDESIGN
+        BG2 -- Approved or not applicable --> BPO[Product Owner creates<br/>atomic permission-fit shards]
+        BPO --> BDRAFT[Story status: draft]
+    end
+
+    subgraph GT[Genesis track]
+        direction TB
+        GENESIS[Complete PROJECT_SEED.md] --> ANALYST[Analyst asks questions<br/>and writes PROJECT_BRIEF.md]
+        ANALYST --> PM[PM writes PRD.md<br/>requirements, NFRs, and epics]
+        PM --> GG1{Gate 1<br/>scope approved?}
+        GG1 -- Changes --> ANALYST
+        GG1 -- Approved --> ARCH[Architect writes architecture,<br/>contract, repository layout,<br/>and bootstrap ownership]
+        GG1 -- Approved --> UX[UX Designer writes flows,<br/>accessibility, and UI design]
+        ARCH --> PO[Product Owner shards epics]
+        UX --> PO
+        PO --> GG2{Gate 2<br/>schema, integration, design,<br/>and shards approved?}
+        GG2 -- Changes --> ARCH
+        GG2 -- Changes --> UX
+        GG2 -- Changes --> PO
+        GG2 -- Approved --> GDRAFT[Story status: draft<br/>first root toolchain work is<br/>a human Conductor bootstrap]
+    end
+
+    DDRAFT --> DELIVERY([Enter universal delivery loop])
+    BDRAFT --> DELIVERY
+    GDRAFT --> DELIVERY

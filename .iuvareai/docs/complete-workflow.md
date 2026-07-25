@@ -5,7 +5,7 @@ description: "Mermaid navigation maps for the complete Iuvare AI SDLC, including
 tags: [methodology, workflow, mermaid, onboarding]
 timestamp: 2026-07-25
 doc: complete-workflow
-version: 1.0.1
+version: 1.0.2
 status: active
 last_updated: 2026-07-25
 audience: [conductor, orchestrator, all-personas]
@@ -28,10 +28,10 @@ active policies win.
 - **DoR** — machine-checked structural startability plus Gate-2 semantic review.
 - **DoD** — tests green, Gate 3 recorded, artifacts merged, and audit data saved.
 
-> **VS Code preview:** the built-in Markdown preview may not execute Mermaid.
-> Each section therefore shows a committed PNG generated from the Mermaid source.
-> Expand **Mermaid source** only when editing the diagram. Optionally install
-> `bierner.markdown-mermaid` for live Mermaid rendering in VS Code.
+> **VS Code preview:** each section displays a committed PNG, so no Mermaid
+> extension is required. The editable Mermaid source is stored separately as
+> `.mmd` to prevent preview-renderer conflicts. VS Code 1.121+ supports Mermaid
+> natively; do not install the deprecated `bierner.markdown-mermaid` extension.
 
 ---
 
@@ -39,79 +39,7 @@ active policies win.
 
 ![Track selection and specification workflow](assets/complete-workflow/track-selection.png)
 
-<details>
-<summary>Mermaid source</summary>
-
-```mermaid
-flowchart TD
-    START([Work request, product idea, incident, or change]) --> INSTALLED{Framework installed<br/>and current?}
-
-    INSTALLED -- No --> INSTALL[Install or upgrade from canonical template]
-    INSTALL --> CONFORM[Run OKF conformance]
-    CONFORM --> ACTIVATE[Activate persona skills and harness permission gate]
-    ACTIVATE --> ISOLATE[Enable container or micro-VM isolation<br/>and project CI controls]
-    ISOLATE --> CLASSIFY
-    INSTALLED -- Yes --> CLASSIFY{Choose the lowest-risk track<br/>that safely contains the work}
-
-    CLASSIFY -- Small local hotfix<br/>or UI tweak --> FLASH
-    CLASSIFY -- Change to shipped code --> DELTA
-    CLASSIFY -- Isolated feature<br/>or extension --> BLUEPRINT
-    CLASSIFY -- Greenfield, major upgrade,<br/>or systemic change --> GENESIS
-
-    subgraph FT[Flash track]
-        direction TB
-        FLASH[Write TECH_SPEC.md] --> FIMPL[Human Conductor implements<br/>inside the bounded spec]
-        FIMPL --> FTEST[Run focused local and unit tests]
-        FTEST -- Fail --> FIMPL
-        FTEST -- Green --> FG3{Gate 3<br/>human diff review}
-        FG3 -- Changes --> FIMPL
-        FG3 -- Approved --> FEND([Flash complete at local scope])
-    end
-
-    subgraph DT[Delta track]
-        direction TB
-        DELTA[Load shipped source, tests,<br/>and original shard if available] --> DSHARD[Create DELTA_SHARD.md<br/>delta_type, contract_touched,<br/>inputs, outputs, criteria]
-        DSHARD --> DCONTRACT{Data contract touched?}
-        DCONTRACT -- Yes --> DBUMP[Architect versions contract<br/>and runs contract guard]
-        DBUMP --> DSTALE[Incompatible open shards become stale<br/>and must be re-readied]
-        DSTALE --> DDRAFT[Delta status: draft]
-        DCONTRACT -- No --> DDRAFT
-    end
-
-    subgraph BT[Blueprint track]
-        direction TB
-        BLUEPRINT[Create PRD_SHARD and API contract] --> BG1{Gate 1<br/>scope approved?}
-        BG1 -- Changes --> BLUEPRINT
-        BG1 -- Approved --> BDESIGN[Architect and UX define affected<br/>interfaces, flow, and design]
-        BDESIGN --> BG2{Gate 2 required?<br/>schema or integration changed}
-        BG2 -- Changes --> BDESIGN
-        BG2 -- Approved or not applicable --> BPO[Product Owner creates<br/>atomic permission-fit shards]
-        BPO --> BDRAFT[Story status: draft]
-    end
-
-    subgraph GT[Genesis track]
-        direction TB
-        GENESIS[Complete PROJECT_SEED.md] --> ANALYST[Analyst asks questions<br/>and writes PROJECT_BRIEF.md]
-        ANALYST --> PM[PM writes PRD.md<br/>requirements, NFRs, and epics]
-        PM --> GG1{Gate 1<br/>scope approved?}
-        GG1 -- Changes --> ANALYST
-        GG1 -- Approved --> ARCH[Architect writes architecture,<br/>contract, repository layout,<br/>and bootstrap ownership]
-        GG1 -- Approved --> UX[UX Designer writes flows,<br/>accessibility, and UI design]
-        ARCH --> PO[Product Owner shards epics]
-        UX --> PO
-        PO --> GG2{Gate 2<br/>schema, integration, design,<br/>and shards approved?}
-        GG2 -- Changes --> ARCH
-        GG2 -- Changes --> UX
-        GG2 -- Changes --> PO
-        GG2 -- Approved --> GDRAFT[Story status: draft<br/>first root toolchain work is<br/>a human Conductor bootstrap]
-    end
-
-    DDRAFT --> DELIVERY([Enter universal delivery loop])
-    BDRAFT --> DELIVERY
-    GDRAFT --> DELIVERY
-```
-
-</details>
+[Open Mermaid source](assets/complete-workflow/track-selection.mmd)
 
 > Flash deliberately stops at local scope in the current trust-threshold model.
 > If a “small” change must alter shipped production code, classify it as **Delta**
@@ -125,64 +53,7 @@ This loop applies to Genesis and Blueprint stories and Delta shards.
 
 ![Universal shard delivery and state machine](assets/complete-workflow/delivery-state-machine.png)
 
-<details>
-<summary>Mermaid source</summary>
-
-```mermaid
-flowchart TD
-    DRAFT([draft]) --> APPROVALS{Required human scope and<br/>design gates recorded?}
-    APPROVALS -- No --> WAIT[Stop and obtain the required gate]
-    WAIT --> DRAFT
-    APPROVALS -- Yes --> DOR[Run scripts/dor-check.mjs]
-
-    DOR --> DORPASS{DoR green?<br/>schema, paths, dependencies,<br/>contract, criteria, permission-fit}
-    DORPASS -- No --> AUTHOR[Return to Product Owner or shard author<br/>with every reported failure]
-    AUTHOR --> DRAFT
-    DORPASS -- Yes --> READY[Orchestrator records ready]
-
-    READY --> ROUTE{All outputs fit the one<br/>declared implementer?}
-    ROUTE -- No --> AUTHOR
-    ROUTE -- Human Conductor --> HUMAN[Route explicitly to human<br/>reason and bootstrap classification required]
-    ROUTE -- Agent persona --> ASSIGN[Select active persona and bind shard<br/>Pi: /iuvare-persona and /iuvare-story]
-
-    HUMAN --> ACTIVE[in_progress<br/>single owner]
-    ASSIGN --> ACTIVE
-    ACTIVE --> IMPLEMENT[Implement only declared outputs<br/>under contract and sandbox]
-    IMPLEMENT --> LOCAL{Local build, lint,<br/>typecheck, and tests green?}
-    LOCAL -- No, budget remains --> IMPLEMENT
-    LOCAL -- Budget ceiling hit --> BLOCKED[blocked]
-    LOCAL -- Yes --> REVIEW[review<br/>Code Reviewer checks security,<br/>dependencies, contract, containment]
-
-    REVIEW --> G3{Gate 3<br/>human line-by-line diff review}
-    G3 -- Rejected, cycle 1 or 2 --> ACTIVE
-    G3 -- Third dispute --> CONFLICT[Escalate to human Conductor]
-    CONFLICT -- Rework approved --> ACTIVE
-    CONFLICT -- Cannot resolve --> BLOCKED
-    G3 -- Approved --> QA_STATE[qa]
-
-    QA_STATE --> TEA[Test Architect creates edge-case matrix<br/>for Genesis and Blueprint]
-    TEA --> QA[QA runs track-required tests<br/>with synthetic or sanitized data]
-    QA --> QARESULT{Tests green?}
-    QARESULT -- Yes --> DOD[Orchestrator verifies DoD,<br/>archives session and metrics]
-    DOD --> DONE([done])
-
-    QARESULT -- No --> ATTEMPTS{Self-heal attempts used<br/>less than 3?}
-    ATTEMPTS -- Yes --> PACKET[Issue one bounded failure packet<br/>expected, observed, attempt number]
-    PACKET --> ACTIVE
-    ATTEMPTS -- No --> BLOCKED
-
-    BLOCKED --> REMEDIATE{Release Manager and human<br/>choose remediation}
-    REMEDIATE -- Bounded fix authorized --> ACTIVE
-    REMEDIATE -- Abandon or re-scope --> DRAFT
-
-    CONTRACT[Contract MAJOR becomes incompatible] -. any pre-done shard .-> STALE[stale]
-    STALE --> REREADY[Update contract_version, inputs,<br/>outputs, and criteria]
-    REREADY --> DRAFT
-
-    DONE --> RELEASE([Enter track-specific release flow])
-```
-
-</details>
+[Open Mermaid source](assets/complete-workflow/delivery-state-machine.mmd)
 
 ### State ownership rule
 
@@ -197,62 +68,7 @@ authority.
 
 ![Release, rollback, incident, and feedback workflow](assets/complete-workflow/release-recovery.png)
 
-<details>
-<summary>Mermaid source</summary>
-
-```mermaid
-flowchart TD
-    DONE([done]) --> TRACK{Track}
-
-    TRACK -- Flash --> FLOK[Focused tests and Gate 3 recorded]
-    FLOK --> FSTOP([Complete at local scope])
-
-    TRACK -- Delta --> DREG{Existing regression suite green<br/>and Gate 3 recorded?}
-    DREG -- No --> NODEPLOY[Do not deploy<br/>open Delta fix shard]
-    DREG -- Yes --> DAPPROVE{Human production approval}
-    DAPPROVE -- No --> HOLD[Hold release]
-    DAPPROVE -- Yes --> PROD
-
-    TRACK -- Blueprint --> BSTAGE[Release Manager deploys to staging]
-    BSTAGE --> BINT{Integration and feature suite green?}
-    BINT -- No --> NODEPLOY
-    BINT -- Yes --> BG4{Gate 4<br/>rollback path confirmed?}
-    BG4 -- No --> HOLD
-    BG4 -- Yes --> BFINAL{Human production approval}
-    BFINAL -- No --> HOLD
-    BFINAL -- Yes --> PROD
-
-    TRACK -- Genesis --> GFULL{Full regression, cross-module,<br/>and migration tests green?}
-    GFULL -- No --> NODEPLOY
-    GFULL -- Yes --> GSTAGE[Release Manager deploys to staging<br/>with sanitized data]
-    GSTAGE --> GINT{Integration, E2E, and<br/>quantified NFR checks green?}
-    GINT -- No --> NODEPLOY
-    GINT -- Yes --> GG4{Gate 4<br/>rollback artifact or feature flag confirmed?}
-    GG4 -- No --> HOLD
-    GG4 -- Yes --> GFINAL{Final Gate<br/>human approves production?}
-    GFINAL -- No --> HOLD
-    GFINAL -- Yes --> PROD[Deploy immutable artifact to production]
-
-    HOLD --> RELEASE_REVIEW[Resolve approval or rollback gap]
-    RELEASE_REVIEW --> TRACK
-    NODEPLOY --> FIX[Create Delta fix with regression proof]
-    FIX --> DELIVERY([Universal delivery loop])
-
-    PROD --> WATCH{Production watch window healthy?}
-    WATCH -- Yes --> CLOSE[Close deployment record<br/>retain sessions, metrics, and provenance]
-    WATCH -- No --> ROLLBACK[Automatic rollback to last-known-good]
-    ROLLBACK --> INCIDENT[Open incident and Delta fix shard]
-    INCIDENT --> DELIVERY
-    CLOSE --> RETRO[Aggregate rework and budget metrics<br/>by persona and track]
-    RETRO --> IMPROVE{Recurring failure pattern?}
-    IMPROVE -- Yes --> TUNE[Retune persona, policy, methodology,<br/>or automated control with tests]
-    TUNE --> VERIFY[Run framework tests and OKF conformance]
-    VERIFY --> UPGRADE[Version, review, publish,<br/>and re-sync project copies]
-    IMPROVE -- No --> END([Release complete])
-    UPGRADE --> END
-```
-
-</details>
+[Open Mermaid source](assets/complete-workflow/release-recovery.mmd)
 
 ---
 

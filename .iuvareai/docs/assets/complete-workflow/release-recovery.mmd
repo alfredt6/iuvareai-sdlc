@@ -1,0 +1,49 @@
+flowchart TD
+    DONE([done]) --> TRACK{Track}
+
+    TRACK -- Flash --> FLOK[Focused tests and Gate 3 recorded]
+    FLOK --> FSTOP([Complete at local scope])
+
+    TRACK -- Delta --> DREG{Existing regression suite green<br/>and Gate 3 recorded?}
+    DREG -- No --> NODEPLOY[Do not deploy<br/>open Delta fix shard]
+    DREG -- Yes --> DAPPROVE{Human production approval}
+    DAPPROVE -- No --> HOLD[Hold release]
+    DAPPROVE -- Yes --> PROD
+
+    TRACK -- Blueprint --> BSTAGE[Release Manager deploys to staging]
+    BSTAGE --> BINT{Integration and feature suite green?}
+    BINT -- No --> NODEPLOY
+    BINT -- Yes --> BG4{Gate 4<br/>rollback path confirmed?}
+    BG4 -- No --> HOLD
+    BG4 -- Yes --> BFINAL{Human production approval}
+    BFINAL -- No --> HOLD
+    BFINAL -- Yes --> PROD
+
+    TRACK -- Genesis --> GFULL{Full regression, cross-module,<br/>and migration tests green?}
+    GFULL -- No --> NODEPLOY
+    GFULL -- Yes --> GSTAGE[Release Manager deploys to staging<br/>with sanitized data]
+    GSTAGE --> GINT{Integration, E2E, and<br/>quantified NFR checks green?}
+    GINT -- No --> NODEPLOY
+    GINT -- Yes --> GG4{Gate 4<br/>rollback artifact or feature flag confirmed?}
+    GG4 -- No --> HOLD
+    GG4 -- Yes --> GFINAL{Final Gate<br/>human approves production?}
+    GFINAL -- No --> HOLD
+    GFINAL -- Yes --> PROD[Deploy immutable artifact to production]
+
+    HOLD --> RELEASE_REVIEW[Resolve approval or rollback gap]
+    RELEASE_REVIEW --> TRACK
+    NODEPLOY --> FIX[Create Delta fix with regression proof]
+    FIX --> DELIVERY([Universal delivery loop])
+
+    PROD --> WATCH{Production watch window healthy?}
+    WATCH -- Yes --> CLOSE[Close deployment record<br/>retain sessions, metrics, and provenance]
+    WATCH -- No --> ROLLBACK[Automatic rollback to last-known-good]
+    ROLLBACK --> INCIDENT[Open incident and Delta fix shard]
+    INCIDENT --> DELIVERY
+    CLOSE --> RETRO[Aggregate rework and budget metrics<br/>by persona and track]
+    RETRO --> IMPROVE{Recurring failure pattern?}
+    IMPROVE -- Yes --> TUNE[Retune persona, policy, methodology,<br/>or automated control with tests]
+    TUNE --> VERIFY[Run framework tests and OKF conformance]
+    VERIFY --> UPGRADE[Version, review, publish,<br/>and re-sync project copies]
+    IMPROVE -- No --> END([Release complete])
+    UPGRADE --> END
