@@ -59,15 +59,16 @@ Final Gate human approves production. (spec sections 3 and 5)
 ## Advancing a story
 draft -> ready -> in_progress -> review -> qa -> done (+ blocked / stale).
 Only the Orchestrator writes status; DoR (including implementer write-set fit) must be green before ready.
-See docs/state-machine.md and docs/definition-of-ready.md.
+See docs/complete-workflow.md for the end-to-end map, then docs/state-machine.md
+and docs/definition-of-ready.md for exact rules.
 
 ## Start here (first story)
 - Greenfield: fill .iuvareai/specs/PROJECT_SEED.md, then /skill:analyst
   (it asks clarifying questions first, then writes PROJECT_BRIEF.md).
 - Brownfield (existing code, no brief): /skill:analyst reverse-engineers the
   brief from the codebase (asks first).
-Then Gate 1 -> /skill:pm (PRD) -> /skill:architect + /skill:ux-designer ->
-/skill:product-owner (stories) -> Phase 3. Genesis architecture must assign the
+Then /skill:pm (PRD) -> Gate 1 -> /skill:architect + /skill:ux-designer ->
+/skill:product-owner (stories) -> Gate 2 -> Phase 3. Genesis architecture must assign the
 one-time root toolchain bootstrap to the human Conductor before source stories.
 
 When in doubt, defer to .iuvareai/IUVARE_AI_SDLC_v3.md — this map is a pointer,

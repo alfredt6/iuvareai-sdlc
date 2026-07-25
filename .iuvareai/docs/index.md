@@ -3,6 +3,7 @@
 Procedural references — the HOW. Distinct from [policies](../policies/) (which
 are *enforced*); these are *followed*.
 
+* [Complete Workflow](complete-workflow.md) — Mermaid maps from track selection through delivery, release, recovery, and feedback
 * [Sharding](sharding.md) — atomicity rules, granularity heuristics, process, anti-patterns
 * [Definition of Ready](definition-of-ready.md) — the 9-point startability checklist enforced by CI
 * [Story State Machine](state-machine.md) — 8 states, legal transitions, single-writer rule

@@ -16,6 +16,8 @@ timestamp: 2026-07-04
 
 ---
 
+> **New operator?** Start with the [Complete Workflow Mermaid maps](docs/complete-workflow.md), then return here for normative rules.
+
 ## 🔁 Changelog (v3.0 → v3.1)
 
 **Greenfield implementability hardening (v3.1):**
