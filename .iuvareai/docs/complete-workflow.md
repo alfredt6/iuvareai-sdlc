@@ -5,7 +5,7 @@ description: "Mermaid navigation maps for the complete Iuvare AI SDLC, including
 tags: [methodology, workflow, mermaid, onboarding]
 timestamp: 2026-07-25
 doc: complete-workflow
-version: 1.0.0
+version: 1.0.1
 status: active
 last_updated: 2026-07-25
 audience: [conductor, orchestrator, all-personas]
@@ -28,9 +28,19 @@ active policies win.
 - **DoR** — machine-checked structural startability plus Gate-2 semantic review.
 - **DoD** — tests green, Gate 3 recorded, artifacts merged, and audit data saved.
 
+> **VS Code preview:** the built-in Markdown preview may not execute Mermaid.
+> Each section therefore shows a committed PNG generated from the Mermaid source.
+> Expand **Mermaid source** only when editing the diagram. Optionally install
+> `bierner.markdown-mermaid` for live Mermaid rendering in VS Code.
+
 ---
 
 ## 1. Master workflow: request → track → ready work
+
+![Track selection and specification workflow](assets/complete-workflow/track-selection.png)
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 flowchart TD
@@ -101,6 +111,8 @@ flowchart TD
     GDRAFT --> DELIVERY
 ```
 
+</details>
+
 > Flash deliberately stops at local scope in the current trust-threshold model.
 > If a “small” change must alter shipped production code, classify it as **Delta**
 > so regression and production controls apply.
@@ -110,6 +122,11 @@ flowchart TD
 ## 2. Universal shard delivery and state machine
 
 This loop applies to Genesis and Blueprint stories and Delta shards.
+
+![Universal shard delivery and state machine](assets/complete-workflow/delivery-state-machine.png)
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 flowchart TD
@@ -165,6 +182,8 @@ flowchart TD
     DONE --> RELEASE([Enter track-specific release flow])
 ```
 
+</details>
+
 ### State ownership rule
 
 Only the **Orchestrator** records status transitions. Reviewer and QA verdicts
@@ -175,6 +194,11 @@ authority.
 ---
 
 ## 3. Release, promotion, rollback, and incident flow
+
+![Release, rollback, incident, and feedback workflow](assets/complete-workflow/release-recovery.png)
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 flowchart TD
@@ -227,6 +251,8 @@ flowchart TD
     IMPROVE -- No --> END([Release complete])
     UPGRADE --> END
 ```
+
+</details>
 
 ---
 
