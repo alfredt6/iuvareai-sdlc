@@ -17,9 +17,11 @@ references: ["SDLC v3.1 §2–§16", "Focused workflow guides"]
 **Do not follow every framework path.** Choose one track, read that track's page,
 then use the shared story and release guides when the page tells you to.
 
-![Six-step framework overview](workflows/assets/overview.svg)
+<a href="workflows/assets/overview.svg"><img src="workflows/assets/overview.svg" alt="Six-step framework overview" height="420"></a>
 
-[Open scalable SVG](workflows/assets/overview.svg) · [Mermaid source](workflows/assets/overview.mmd)
+[Open zoomable view](workflows/assets/overview.svg) · [Mermaid source](workflows/assets/overview.mmd)
+
+**Zoom controls in VS Code (Better SVG):** click to zoom in, **Alt+click** to zoom out, drag to pan, and use **Center SVG** to reset/fit. If the controls are absent, install `midudev.better-svg`.
 
 ## Step 1 — Choose your route
 

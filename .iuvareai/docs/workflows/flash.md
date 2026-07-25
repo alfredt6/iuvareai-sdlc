@@ -16,9 +16,9 @@ audience: [conductor]
 **Use when:** the change is small, local, and will not be promoted to production.
 If it modifies shipped production code, use [Delta](delta.md).
 
-![Flash workflow](assets/flash.svg)
+<a href="assets/flash.svg"><img src="assets/flash.svg" alt="Flash workflow" height="420"></a>
 
-[Open scalable SVG](assets/flash.svg) · [Mermaid source](assets/flash.mmd)
+[Open zoomable view](assets/flash.svg) · [Mermaid source](assets/flash.mmd)
 
 ## Five actions only
 

@@ -16,9 +16,9 @@ audience: [conductor, analyst, pm, architect, ux-designer, product-owner]
 **Use when:** building a new product, performing a major upgrade, or changing the
 system as a whole.
 
-![Genesis planning workflow](assets/genesis.svg)
+<a href="assets/genesis.svg"><img src="assets/genesis.svg" alt="Genesis planning workflow" height="460"></a>
 
-[Open scalable SVG](assets/genesis.svg) · [Mermaid source](assets/genesis.mmd)
+[Open zoomable view](assets/genesis.svg) · [Mermaid source](assets/genesis.mmd)
 
 ## Do these steps in order
 

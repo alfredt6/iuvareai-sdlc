@@ -16,9 +16,9 @@ audience: [orchestrator, developer, code-reviewer, test-architect, qa]
 Focus on the happy path first. Open [Recovery](recovery.md) only when something
 fails.
 
-![Story lifecycle](assets/story-lifecycle.svg)
+<a href="assets/story-lifecycle.svg"><img src="assets/story-lifecycle.svg" alt="Story lifecycle" height="420"></a>
 
-[Open scalable SVG](assets/story-lifecycle.svg) · [Mermaid source](assets/story-lifecycle.mmd)
+[Open zoomable view](assets/story-lifecycle.svg) · [Mermaid source](assets/story-lifecycle.mmd)
 
 | State | What happens now | Who moves it forward |
 |---|---|---|

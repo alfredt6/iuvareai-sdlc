@@ -15,9 +15,9 @@ audience: [conductor, orchestrator]
 
 Answer the questions in order and stop at the first match.
 
-![Track selection decision](assets/choose-track.svg)
+<a href="assets/choose-track.svg"><img src="assets/choose-track.svg" alt="Track selection decision" height="460"></a>
 
-[Open scalable SVG](assets/choose-track.svg) · [Mermaid source](assets/choose-track.mmd)
+[Open zoomable view](assets/choose-track.svg) · [Mermaid source](assets/choose-track.mmd)
 
 | Track | Use it when | Required preparation | Next guide |
 |---|---|---|---|

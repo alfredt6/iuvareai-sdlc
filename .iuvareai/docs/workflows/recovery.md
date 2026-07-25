@@ -16,9 +16,9 @@ audience: [orchestrator, developer, qa, release-manager, conductor]
 Identify where the failure occurred, follow only that row, then return to the
 normal lifecycle.
 
-![Recovery routing](assets/recovery.svg)
+<a href="assets/recovery.svg"><img src="assets/recovery.svg" alt="Recovery routing" width="760"></a>
 
-[Open scalable SVG](assets/recovery.svg) · [Mermaid source](assets/recovery.mmd)
+[Open zoomable view](assets/recovery.svg) · [Mermaid source](assets/recovery.mmd)
 
 | Failure | Immediate action | Resume when |
 |---|---|---|

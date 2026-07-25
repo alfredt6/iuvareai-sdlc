@@ -15,9 +15,9 @@ audience: [conductor, orchestrator, developer]
 
 **Use when:** changing, fixing, or refactoring shipped code.
 
-![Delta preparation workflow](assets/delta.svg)
+<a href="assets/delta.svg"><img src="assets/delta.svg" alt="Delta preparation workflow" height="460"></a>
 
-[Open scalable SVG](assets/delta.svg) · [Mermaid source](assets/delta.mmd)
+[Open zoomable view](assets/delta.svg) · [Mermaid source](assets/delta.mmd)
 
 ## Do these steps in order
 

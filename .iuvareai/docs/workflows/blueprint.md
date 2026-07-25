@@ -16,9 +16,9 @@ audience: [conductor, architect, ux-designer, product-owner]
 **Use when:** the feature is bounded but needs explicit interfaces, design, and
 staging verification.
 
-![Blueprint planning workflow](assets/blueprint.svg)
+<a href="assets/blueprint.svg"><img src="assets/blueprint.svg" alt="Blueprint planning workflow" height="460"></a>
 
-[Open scalable SVG](assets/blueprint.svg) · [Mermaid source](assets/blueprint.mmd)
+[Open zoomable view](assets/blueprint.svg) · [Mermaid source](assets/blueprint.mmd)
 
 ## Do these steps in order
 

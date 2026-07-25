@@ -15,9 +15,9 @@ audience: [release-manager, conductor]
 
 Start here only after the story is `done`.
 
-![Track-specific release paths](assets/release.svg)
+<a href="assets/release.svg"><img src="assets/release.svg" alt="Track-specific release paths" width="760"></a>
 
-[Open scalable SVG](assets/release.svg) · [Mermaid source](assets/release.mmd)
+[Open zoomable view](assets/release.svg) · [Mermaid source](assets/release.mmd)
 
 | Track | Required path |
 |---|---|
