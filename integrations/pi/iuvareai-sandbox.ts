@@ -14,7 +14,7 @@ import {
 type WorkState = { persona?: string; shard?: string; outputs: string[] };
 const SHARD_BOUND_PERSONAS = new Set(["developer"]);
 const READ_ONLY_COMMAND = /^(pwd|ls(?:\s+[-\w./]+)*|rg(?:\s+[-\w./:'"=]+)*|git\s+(status|diff|show|log)(?:\s+[-\w./:'"=]+)*)$/;
-const DEV_COMMAND = /^(npm|pnpm|yarn|bun)\s+(test|run\s+(build|lint|typecheck|test(?::[\w-]+)?))(?:\s+[-\w./:'"=]+)*$/;
+const DEV_COMMAND = /^(npm|pnpm|yarn|bun)\s+(test|run\s+(build|lint|typecheck|test(?::[\w-]+)?|db:(?:generate|push|migrate)))(?:\s+[-\w./:'"=]+)*$/;
 const TEST_COMMAND = /^(npm|pnpm|yarn|bun)\s+(test|run\s+test(?::[\w-]+)?)(?:\s+[-\w./:'"=]+)*$/;
 const GOVERNANCE_COMMAND = /^node\s+scripts\/(dor-check|contract-guard|okf-conformance)\.mjs(?:\s+[-\w./]+)?$/;
 
