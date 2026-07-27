@@ -24,12 +24,18 @@ test("installer and Pi activation ship the runnable permission gate", () => {
   const install = spawnSync(process.execPath, [installer, target], { encoding: "utf8" });
   assert.equal(install.status, 0, install.stderr);
   assert.equal(existsSync(join(target, "integrations", "pi", "iuvareai-sandbox.ts")), true);
+  assert.equal(existsSync(join(target, ".iuvareai", "tasks")), true);
+  assert.equal(existsSync(join(target, ".iuvareai", "evidence")), true);
 
   const activate = spawnSync(process.execPath, [join(target, "scripts", "activate-pi-skills.mjs")], {
     cwd: target,
     encoding: "utf8",
   });
   assert.equal(activate.status, 0, activate.stderr);
-  assert.equal(existsSync(join(target, ".pi", "extensions", "iuvareai-sandbox.ts")), true);
-  assert.match(activate.stdout, /fail-closed permission gate/);
+  const gatePath = join(target, ".pi", "extensions", "iuvareai-sandbox.ts");
+  assert.equal(existsSync(gatePath), true);
+  const gate = readFileSync(gatePath, "utf8");
+  assert.match(gate, /iuvare_request_scope/);
+  assert.doesNotMatch(gate, /iuvare-persona/);
+  assert.match(activate.stdout, /task-scoped, risk-based permission gate/);
 });

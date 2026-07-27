@@ -1,145 +1,139 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
-import { parseFrontmatter } from "../../scripts/lib-frontmatter.mjs";
-import { validateShard } from "../../scripts/lib-dor.mjs";
+import { StringEnum } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
+import { canonicalRepoPath, isSensitivePath } from "../../scripts/lib-permissions.mjs";
 import {
-  canonicalRepoPath,
-  isSensitivePath,
-  loadPersonaWriteSets,
-  matchesWritePattern,
-} from "../../scripts/lib-permissions.mjs";
+  classifyCommand, isPathInScope, maxRisk, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
+} from "../../scripts/lib-task-scope.mjs";
 
-type WorkState = { persona?: string; shard?: string; outputs: string[] };
-const SHARD_BOUND_PERSONAS = new Set(["developer"]);
-const READ_ONLY_COMMAND = /^(pwd|ls(?:\s+[-\w./]+)*|rg(?:\s+[-\w./:'"=]+)*|git\s+(status|diff|show|log)(?:\s+[-\w./:'"=]+)*)$/;
-const DEV_COMMAND = /^(npm|pnpm|yarn|bun)\s+(test|run\s+(build|lint|typecheck|test(?::[\w-]+)?|db:(?:generate|push|migrate)))(?:\s+[-\w./:'"=]+)*$/;
-const TEST_COMMAND = /^(npm|pnpm|yarn|bun)\s+(test|run\s+test(?::[\w-]+)?)(?:\s+[-\w./:'"=]+)*$/;
-const GOVERNANCE_COMMAND = /^node\s+scripts\/(dor-check|contract-guard|okf-conformance)\.mjs(?:\s+[-\w./]+)?$/;
+type Lane = "direct" | "standard" | "controlled";
+type Risk = "low" | "medium" | "high" | "critical";
+type Grant = {
+  goal: string; lane: Lane; risk: Risk; reads: string[]; writes: string[]; commands: string[];
+  verification: string[]; approvedAt: number; expiresAt: number; approval: "automatic" | "human";
+};
+
+const TTL_MS = 60 * 60 * 1000;
 
 export default function (pi: ExtensionAPI) {
-  let state: WorkState = { outputs: [] };
+  let grant: Grant | undefined;
 
   pi.on("session_start", (_event, ctx) => {
-    state = { outputs: [] };
+    grant = undefined;
     for (const entry of ctx.sessionManager.getBranch()) {
-      if (entry.type === "custom" && entry.customType === "iuvare-work-state")
-        state = entry.data as WorkState;
+      if (entry.type === "custom" && entry.customType === "iuvare-task-grant") grant = entry.data as Grant;
     }
+    if (grant && grant.expiresAt <= Date.now()) grant = undefined;
     showStatus(ctx);
   });
 
-  pi.registerCommand("iuvare-persona", {
-    description: "Select the active Iuvare persona (fail-closed write permissions)",
-    handler: async (args, ctx) => {
-      const persona = args.trim();
-      const sets = loadPersonaWriteSets(resolve(ctx.cwd, ".iuvareai/agents"));
-      if (!sets.has(persona)) {
-        ctx.ui.notify(`Unknown Iuvare persona: ${persona || "(empty)"}`, "error");
-        return;
-      }
-      state = { persona, outputs: [] };
-      pi.appendEntry("iuvare-work-state", state);
-      showStatus(ctx);
-    },
-  });
+  pi.on("before_agent_start", (event) => ({
+    systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.`,
+  }));
 
-  pi.registerCommand("iuvare-story", {
-    description: "Bind the active persona to a DoR-checked shard's declared outputs",
-    handler: async (args, ctx) => {
-      if (!state.persona) {
-        ctx.ui.notify("Select /iuvare-persona first", "error");
-        return;
+  pi.registerTool({
+    name: "iuvare_request_scope",
+    label: "Iuvare Task Scope",
+    description: "Request a short-lived, task-scoped capability before mutating files. Call this alone before write/edit/bash mutations. Personas do not grant file access.",
+    promptSnippet: "Request exact task-scoped read/write/command authorization before repository mutations",
+    promptGuidelines: ["Use iuvare_request_scope before the first repository mutation and whenever the required scope changes."],
+    parameters: Type.Object({
+      goal: Type.String({ description: "One-sentence outcome" }),
+      lane: StringEnum(["direct", "standard", "controlled"] as const),
+      risk: StringEnum(["low", "medium", "high", "critical"] as const),
+      reads: Type.Array(Type.String(), { description: "Exact files or directory prefixes ending in /" }),
+      writes: Type.Array(Type.String(), { description: "Exact output files; directory-wide writes are rejected" }),
+      commands: Type.Array(StringEnum(["inspect", "quality", "build", "dependency", "database", "network", "release", "destructive"] as const)),
+      verification: Type.Array(Type.String()),
+    }),
+    async execute(_id, params, _signal, _update, ctx) {
+      const candidate = { ...params } as Omit<Grant, "approvedAt" | "expiresAt" | "approval">;
+      const errors = validateTaskScope(candidate);
+      if (errors.length) throw new Error(errors.join("; "));
+
+      const requiredRisk = requiredScopeRisk(candidate);
+      let approval: Grant["approval"] = "automatic";
+      if (scopeNeedsApproval(candidate)) {
+        if (!ctx.hasUI) throw new Error("medium/high/critical task scope requires interactive human approval");
+        const preview = [
+          `Goal: ${candidate.goal}`, `Lane: ${candidate.lane}`, `Risk: ${requiredRisk}`,
+          `Writes:\n${candidate.writes.map((path) => `  - ${path}`).join("\n")}`,
+          `Commands: ${candidate.commands.join(", ") || "none"}`, "Approve this exact scope for 60 minutes?",
+        ].join("\n\n");
+        if (!(await ctx.ui.confirm("Iuvare task authorization", preview))) throw new Error("task scope declined by human");
+        approval = "human";
       }
-      let shard: string;
-      try { shard = canonicalRepoPath(ctx.cwd, args.trim()); }
-      catch (error) {
-        ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-        return;
-      }
-      const absolute = resolve(ctx.cwd, shard);
-      if (!existsSync(absolute)) {
-        ctx.ui.notify(`Shard not found: ${shard}`, "error");
-        return;
-      }
-      const result = validateShard(shard, { root: ctx.cwd });
-      if (result.errors.length) {
-        ctx.ui.notify(`Shard failed DoR: ${result.errors.join("; ")}`, "error");
-        return;
-      }
-      const fm = parseFrontmatter(readFileSync(absolute, "utf8"));
-      if (!fm || fm.implementer !== state.persona || !Array.isArray(fm.expected_outputs)) {
-        ctx.ui.notify(`Shard implementer/outputs do not authorize persona '${state.persona}'`, "error");
-        return;
-      }
-      state = { persona: state.persona, shard, outputs: fm.expected_outputs };
-      pi.appendEntry("iuvare-work-state", state);
+      const now = Date.now();
+      grant = { ...candidate, risk: maxRisk(candidate.risk, requiredRisk) as Risk, approvedAt: now, expiresAt: now + TTL_MS, approval };
+      pi.appendEntry("iuvare-task-grant", grant);
       showStatus(ctx);
+      return {
+        content: [{ type: "text", text: `Authorized ${grant.lane}/${grant.risk} scope for ${grant.writes.length} exact output(s). Proceed within scope.` }],
+        details: { grant },
+      };
     },
   });
 
   pi.registerCommand("iuvare-status", {
-    description: "Show the active Iuvare permission context",
+    description: "Show the active task capability",
     handler: async (_args, ctx) => showStatus(ctx, true),
+  });
+  pi.registerCommand("iuvare-clear", {
+    description: "Revoke the active task capability",
+    handler: async (_args, ctx) => {
+      grant = undefined;
+      pi.appendEntry("iuvare-task-grant", null);
+      showStatus(ctx, true);
+    },
   });
 
   pi.on("tool_call", async (event, ctx) => {
+    if (grant && grant.expiresAt <= Date.now()) grant = undefined;
+
     if (isToolCallEventType("read", event)) {
-      try {
-        const path = canonicalRepoPath(ctx.cwd, event.input.path);
-        if (isSensitivePath(path)) return block(`sensitive path is excluded from context: ${path}`);
-      } catch (error) { return block(error instanceof Error ? error.message : String(error)); }
+      let path: string;
+      try { path = canonicalRepoPath(ctx.cwd, event.input.path); }
+      catch (error) { return block(String((error as Error).message ?? error)); }
+      if (isSensitivePath(path)) return block(`sensitive path is excluded from context: ${path}`);
+      if (grant && !isPathInScope(path, [...grant.reads, ...grant.writes]))
+        return block(`${path} is outside the active task read scope; request a replacement scope`);
       return;
     }
 
     if (isToolCallEventType("write", event) || isToolCallEventType("edit", event)) {
-      if (!state.persona) return block("no active persona; run /iuvare-persona <name>");
+      if (!grant) return block("no active task scope; call iuvare_request_scope first");
       let path: string;
       try { path = canonicalRepoPath(ctx.cwd, event.input.path); }
-      catch (error) { return block(error instanceof Error ? error.message : String(error)); }
+      catch (error) { return block(String((error as Error).message ?? error)); }
       if (isSensitivePath(path)) return block(`sensitive path may not be written: ${path}`);
-
-      const allowed = loadPersonaWriteSets(resolve(ctx.cwd, ".iuvareai/agents")).get(state.persona) ?? [];
-      if (!allowed.some((pattern) => matchesWritePattern(path, pattern)))
-        return block(`${state.persona} may not write ${path}`);
-      if (state.persona === "orchestrator" && /\/[0-9].*\.md$/.test(path)) {
-        if (isToolCallEventType("write", event))
-          return block("Orchestrator may edit shard state fields, not rewrite shard files");
-        const edits = event.input.edits ?? [];
-        if (!edits.length || !edits.every((edit) => isStateField(edit.oldText) && isStateField(edit.newText)))
-          return block("Orchestrator shard edits are limited to status, owner, and dor_checked_at lines");
-      }
-      if (SHARD_BOUND_PERSONAS.has(state.persona) && !state.outputs.includes(path))
-        return block(`${path} is not declared in the active shard's expected_outputs`);
+      if (!grant.writes.includes(path)) return block(`${path} is not an exact output in the active task scope`);
       return;
     }
 
     if (isToolCallEventType("bash", event)) {
-      if (!state.persona) return block("no active persona; run /iuvare-persona <name>");
       const command = event.input.command.trim();
-      if (/[\n;&|><`$(){}]/.test(command)) return block("shell operators/substitution are not allow-listed");
-      const allowed = READ_ONLY_COMMAND.test(command)
-        || (state.persona === "developer" && DEV_COMMAND.test(command))
-        || (state.persona === "qa" && TEST_COMMAND.test(command))
-        || (state.persona === "orchestrator" && GOVERNANCE_COMMAND.test(command));
-      if (!allowed) return block(`bash command is not allow-listed for ${state.persona}`);
+      const commandClass = classifyCommand(command);
+      if (commandClass === "inspect") return;
+      if (!grant) return block("no active task scope; call iuvare_request_scope first");
+      if (!commandClass) return block("command is not classifiable by policy; use a supported command or update the policy");
+      if (!grant.commands.includes(commandClass)) return block(`command class '${commandClass}' is outside the active task scope`);
+      if (commandClass === "release" || commandClass === "destructive") {
+        if (!ctx.hasUI || !(await ctx.ui.confirm("Critical action", `Execute this exact command?\n\n${command}`)))
+          return block("critical command was not approved");
+      }
     }
   });
 
   function showStatus(ctx: any, notify = false) {
-    const label = state.persona
-      ? `Iuvare: ${state.persona}${state.shard ? ` · ${state.shard}` : ""}`
-      : "Iuvare: LOCKED (select persona)";
+    const label = grant
+      ? `Iuvare: ${grant.lane}/${grant.risk} · ${grant.writes.length} output(s) · ${Math.max(0, Math.ceil((grant.expiresAt - Date.now()) / 60000))}m`
+      : "Iuvare: discovery/read-only · request scope before mutation";
     ctx.ui.setStatus("iuvare-sandbox", label);
-    if (notify) ctx.ui.notify(label, state.persona ? "info" : "warning");
+    if (notify) ctx.ui.notify(label, grant ? "info" : "warning");
   }
 }
 
-function isStateField(text: string) {
-  return /^(status|owner|dor_checked_at):[^\r\n]*$/.test(text);
-}
-
 function block(reason: string) {
-  return { block: true as const, reason: `Iuvare sandbox: ${reason}` };
+  return { block: true as const, reason: `Iuvare policy: ${reason}` };
 }

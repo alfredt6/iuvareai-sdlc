@@ -35,8 +35,8 @@ Plus structural additions:
 | `Specification` | the SDLC blueprint |
 | `Persona` | `agents/developer.md` |
 | `ProjectBrief` · `PRD` · `Architecture` · `DataContract` | systemic specs |
-| `Story` | `stories/001.003.user-login-rate-limiting.md` |
-| `Delta` | `deltas/004.auth-rate-limit-delta.md` |
+| `WorkItem` | `tasks/TASK-001.user-login-rate-limiting.md` |
+| `Story` · `Delta` | v3 compatibility concepts |
 | `Policy` | `policies/vcs.md` |
 | `Methodology` | this file |
 
@@ -47,26 +47,26 @@ Plus structural additions:
 4. Cross-link with **bundle-relative** paths (`/specs/DATAMODEL_CONTRACT.md`).
 5. Run `node scripts/okf-conformance.mjs` — it must pass before merge.
 
-Example story concept:
+Example v4 concept:
 ```yaml
 ---
-type: Story
+type: WorkItem
 title: User Login Rate Limiting
-description: 5-attempt/60s lockout on login.
-resource: src/auth/rate_limiter.ts
-tags: [auth, security]
-timestamp: 2026-07-04T10:00:00Z
-# Iuvare extensions:
-track: blueprint
-status: ready
-contract_version: "1.4.0"
-depends_on: [stories/001.002]
+description: Add a five-attempt lockout.
+lane: controlled
+risk: high
+status: proposed
+reads: [src/auth/login.ts]
+writes: [src/auth/rate-limiter.ts, tests/auth/rate-limiter.test.ts]
+commands: [quality]
+acceptance: [The sixth attempt is rejected]
+verification: [Security and regression tests pass]
 ---
 ```
 
 ## Scope boundary
-OKF covers the **knowledge layer** (specs, stories, deltas, policies, docs,
-agents, the specification). The **data layer** — `sessions/*.jsonl` and
+OKF covers the **knowledge layer** (specs, tasks, compatibility stories/deltas,
+policies, reusable methodology, agents, and the specification). The **data layer** — `sessions/*.jsonl` and
 `metrics/*.jsonl` — are logs, not concepts, and are intentionally excluded.
 
 ## Conformance
@@ -75,5 +75,5 @@ Per OKF §9: every non-reserved `.md` has parseable frontmatter with a non-empty
 ```bash
 node scripts/okf-conformance.mjs
 ```
-Wire this as a required CI check alongside `dor-check` and `secret-scan`
+Wire this as a required CI check alongside `task-check` and `secret-scan`
 (see [ci.md](../policies/ci.md)).

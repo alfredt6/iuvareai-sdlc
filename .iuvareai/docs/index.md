@@ -1,13 +1,9 @@
 # Methodology
 
-Procedural references — the HOW. Distinct from [policies](../policies/) (which
-are *enforced*); these are *followed*.
-
-* [Workflow Guide — Start Here](complete-workflow.md) — choose one route, then follow a short focused guide
-* [Sharding](sharding.md) — atomicity rules, granularity heuristics, process, anti-patterns
-* [Definition of Ready](definition-of-ready.md) — the 9-point startability checklist enforced by CI
-* [Story State Machine](state-machine.md) — 8 states, legal transitions, single-writer rule
-* [OKF Adoption](okf.md) — how this bundle conforms to the Open Knowledge Format
-* [OKF Philosophy](okf-philosophy.md) — why a *format*, not docs (the mental model)
-* [Install & Reuse](install.md) — scaffolding the SDLC into new projects
-* [Loop Engineering](loop-engineering.md) — how Iuvare adopts agent loops (bounded; never infinite)
+- [Workflow Guide](complete-workflow.md) — Direct, Standard, or Controlled
+- [Task Readiness](definition-of-ready.md) — structural WorkItem validation
+- [Small-Batch Work Design](sharding.md) — reviewable, verifiable scope
+- [WorkItem State](state-machine.md) — validated transitions without persona ownership
+- [Bounded Agent Loops](loop-engineering.md)
+- [Install and Reuse](install.md)
+- [OKF Adoption](okf.md) · [OKF Philosophy](okf-philosophy.md)

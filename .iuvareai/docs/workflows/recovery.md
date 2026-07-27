@@ -1,47 +1,22 @@
 ---
 type: Methodology
-title: "Workflow 5 — Recovery"
-description: "Small playbooks for DoR, review, QA, contract, and production failures."
-tags: [methodology, workflow, recovery, rollback]
+title: "Recovery"
+description: "Bounded recovery for scope, review, test, and production failures."
+tags: [methodology, workflow, recovery]
 timestamp: 2026-07-25
-doc: workflow-recovery
-version: 1.0.0
-status: active
-last_updated: 2026-07-25
-audience: [orchestrator, developer, qa, release-manager, conductor]
 ---
-
 # Recovery
 
-Identify where the failure occurred, follow only that row, then return to the
-normal lifecycle.
+| Failure | Action |
+|---|---|
+| Task scope too small | Request a replacement exact scope; do not bypass |
+| Task readiness fails | Fix the WorkItem, not implementation |
+| Review rejects | Rework; after two cycles escalate to a human |
+| Tests fail | Focused repair; after three attempts set `blocked` |
+| Budget/grant expires | Stop, retain history, explicitly resume |
+| Staging fails | Do not promote; fix through a new or reopened WorkItem |
+| Production regresses | Roll back first; open a Standard/Controlled fix |
+| Forbidden data/action | Stop immediately and escalate |
 
-```mermaid
-flowchart TD
-    A([Problem detected]) --> B{Where did it fail?}
-    B -- DoR --> C[Fix shard specification and return to draft]
-    B -- Review --> D[Developer reworks; max two cycles]
-    B -- QA --> E[Bounded self-heal; max three attempts]
-    B -- Contract --> F[Mark stale and re-ready]
-    B -- Production --> G[Rollback and open Delta fix]
-    C --> H([Resume normal workflow])
-    D --> H
-    E --> H
-    F --> H
-    G --> H
-```
-
-| Failure | Immediate action | Resume when |
-|---|---|---|
-| DoR | Fix missing/invalid shard metadata, dependencies, inputs, outputs, or permissions | DoR is green; return `draft → ready` |
-| Review | Developer applies specific findings | Gate 3 approves; max two cycles before human escalation |
-| QA | Send one bounded failure packet to Developer | Tests pass within three attempts |
-| Self-heal/budget exhausted | Set `blocked`; stop autonomous retries | Human/Release Manager authorizes remediation |
-| Contract MAJOR mismatch | Set affected open shards `stale` | Shard is updated and re-readied against current contract |
-| Staging failure | Do not promote; create Delta `fix` | Fix completes normal lifecycle |
-| Production regression | Auto-rollback to last-known-good; open incident and Delta `fix` | Regression proof and release gates pass |
-
-Never disable a failing control to make the pipeline move. A blocked pipeline is
-a diagnostic signal.
-
-**Resume:** [Deliver One Story](story-lifecycle.md) or [Release](release.md)
+Do not add permanent ceremony after an incident. Improve the test, observability,
+risk classifier, or policy that would have detected it earlier.

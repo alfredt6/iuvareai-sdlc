@@ -1,12 +1,4 @@
-// scripts/activate-pi-skills.mjs
-// Generates Pi-loadable skills (.pi/skills/<name>.md) from the OKF persona
-// concepts in .iuvareai/agents/. Each persona becomes a skill Pi discovers by
-// `name` + `description` and can invoke as `/skill:<name>`.
-//
-// The OKF bundle (.iuvareai/agents/) stays the single source of truth; this
-// script is the Pi-specific activation layer. Re-run it whenever you edit a persona.
-//
-// Usage: node scripts/activate-pi-skills.mjs
+// Generate optional Pi expertise skills and install the v4 task-capability gate.
 import { copyFileSync, readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
@@ -14,112 +6,45 @@ const SRC = ".iuvareai/agents";
 const OUT = ".pi/skills";
 const EXTENSION_SRC = "integrations/pi/iuvareai-sandbox.ts";
 const EXTENSION_OUT = ".pi/extensions/iuvareai-sandbox.ts";
-
-if (!existsSync(SRC)) {
-  console.error(`✗ no persona source at ${SRC} (run from the project root)`);
-  process.exit(1);
-}
+if (!existsSync(SRC)) fail(`no persona source at ${SRC}`);
+if (!existsSync(EXTENSION_SRC)) fail(`missing Pi integration at ${EXTENSION_SRC}`);
 mkdirSync(OUT, { recursive: true });
 
-const NAME_RE = /^name:\s*(\S+)/m;
-const PERSONA_RE = /^persona:\s*(\S+)/m;
-const DESC_RE = /^description:\s*(.+)$/m;
-
-// Orientation/router skill — a THIN MAP that defers to the canonical spec (no drift).
-const ORIENTATION_SKILL = `---
-name: iuvareai-sdlc
-description: "Iuvare AI SDLC orientation — START HERE. A routing map: which persona to load per phase, the gates, and where the canonical spec lives. Read this FIRST to understand or advance the process."
----
-
-# Iuvare AI SDLC — Orientation Map (start here)
-
-This is a ROUTING MAP, not the spec. For anything beyond routing, read the
-canonical spec at .iuvareai/IUVARE_AI_SDLC_v3.md. The live persona roster is at
-.iuvareai/agents/index.md.
-
-## Pick a track (risk -> process weight)
-- Flash — hotfix, UI tweak, small fn (Gate 3 only)
-- Delta — change to shipped code (regression suite)
-- Blueprint — isolated feature (staging suite)
-- Genesis — greenfield / major upgrade (full gates)
-Details: spec section 2.
-
-## Phase -> which persona to load
-- Phase 1 Explore/Spec: /skill:analyst -> /skill:pm
-- Phase 2 Architect/Design/Shard: /skill:architect, /skill:ux-designer, /skill:product-owner
-- Phase 3 Implement/Review: /skill:developer -> /skill:code-reviewer
-- Phase 4 Verify/Release: /skill:test-architect -> /skill:qa -> /skill:release-manager
-- Any phase (coordinate): /skill:orchestrator
-
-## Gates (human-owned)
-Gate 1 scope sign-off (Blueprint/Genesis); Gate 2 schema/design verified;
-Gate 3 human reviews the PR diff; Gate 4 rollback path confirmed;
-Final Gate human approves production. (spec sections 3 and 5)
-
-## Advancing a story
-draft -> ready -> in_progress -> review -> qa -> done (+ blocked / stale).
-Only the Orchestrator writes status; DoR (including implementer write-set fit) must be green before ready.
-Start at docs/complete-workflow.md, choose one focused route, then consult
-state-machine.md and definition-of-ready.md only when that route points there.
-
-## Start here (first story)
-- Greenfield: fill .iuvareai/specs/PROJECT_SEED.md, then /skill:analyst
-  (it asks clarifying questions first, then writes PROJECT_BRIEF.md).
-- Brownfield (existing code, no brief): /skill:analyst reverse-engineers the
-  brief from the codebase (asks first).
-Then /skill:pm (PRD) -> Gate 1 -> /skill:architect + /skill:ux-designer ->
-/skill:product-owner (stories) -> Gate 2 -> Phase 3. Genesis architecture must assign the
-one-time root toolchain bootstrap to the human Conductor before source stories.
-
-When in doubt, defer to .iuvareai/IUVARE_AI_SDLC_v3.md — this map is a pointer,
-not the source of truth.
-`;
-
-let count = 0;
-const report = [];
-
-// First pass: collect persona entries (slug + content).
 const entries = [];
-for (const f of readdirSync(SRC)) {
-  if (!f.endsWith(".md") || f === "index.md") continue;
-  const text = readFileSync(join(SRC, f), "utf8");
-  const slug = (text.match(NAME_RE)?.[1] || text.match(PERSONA_RE)?.[1] || f.replace(/\.md$/, "")).trim();
-  // Inject `name:` right after the opening frontmatter fence if absent.
-  const out = NAME_RE.test(text) ? text : text.replace(/^---\r?\n/, `---\nname: ${slug}\n`);
-  entries.push({ slug, out });
+for (const file of readdirSync(SRC)) {
+  if (!file.endsWith(".md") || file === "index.md") continue;
+  const text = readFileSync(join(SRC, file), "utf8");
+  const slug = text.match(/^persona:\s*(\S+)/m)?.[1] ?? file.replace(/\.md$/, "");
+  const output = /^name:/m.test(text) ? text : text.replace(/^---\r?\n/, `---\nname: ${slug}\n`);
+  entries.push({ slug, output });
 }
-
-// Clean stale outputs — flat .md AND directory forms — for our skills + the old rogue name.
-// (Pi discovers both .pi/skills/<name>.md and .pi/skills/<name>/SKILL.md; remove both so
-// no duplicates or wrongly-named leftovers survive a re-run.)
-for (const n of [...entries.map((e) => e.slug), "iuvareai-sdlc", "iuvare-sdlc"]) {
-  rmSync(join(OUT, `${n}.md`), { force: true });
-  rmSync(join(OUT, n), { recursive: true, force: true });
+for (const name of [...entries.map((entry) => entry.slug), "iuvareai-sdlc", "iuvare-sdlc"]) {
+  rmSync(join(OUT, `${name}.md`), { force: true });
+  rmSync(join(OUT, name), { recursive: true, force: true });
 }
+for (const entry of entries) writeFileSync(join(OUT, `${entry.slug}.md`), entry.output);
 
-// Second pass: write persona skills.
-for (const { slug, out } of entries) {
-  writeFileSync(join(OUT, `${slug}.md`), out);
-  const desc = out.match(DESC_RE)?.[1]?.trim() ?? "(missing)";
-  report.push(`  ✓ ${slug.padEnd(16)} ${desc.length > 60 ? desc.slice(0, 57) + "…" : desc}`);
-  count++;
-}
+writeFileSync(join(OUT, "iuvareai-sdlc.md"), `---
+name: iuvareai-sdlc
+description: "Iuvare v4 Lean orientation: task-scoped authorization, three delivery lanes, and optional expertise lenses."
+---
+# Iuvare v4 Lean
 
-// Orientation/router skill — a thin map that defers to the canonical spec.
-writeFileSync(join(OUT, "iuvareai-sdlc.md"), ORIENTATION_SKILL);
-report.push(`  ✓ iuvareai-sdlc        orientation map (start here — routes phases to personas)`);
-count++;
+Read .iuvareai/IUVARE_AI_SDLC_v4.md for normative rules.
 
-if (!existsSync(EXTENSION_SRC)) {
-  console.error(`✗ missing Pi sandbox integration at ${EXTENSION_SRC}`);
-  process.exit(1);
-}
+- Direct: bounded low-risk work; session task grant only.
+- Standard: normal features/fixes; compact WorkItem + CI + independent review.
+- Controlled: high-impact work; explicit approval and evidence.
+
+Do not ask the operator to select a persona. Before mutation, call
+\`iuvare_request_scope\` alone with exact writes, minimal reads, command classes,
+and verification. Low-risk work auto-authorizes; sensitive scope asks once.
+Personas are optional expertise lenses and never grant permissions.
+`);
 mkdirSync(join(".pi", "extensions"), { recursive: true });
 copyFileSync(EXTENSION_SRC, EXTENSION_OUT);
+console.log(`Activated ${entries.length + 1} optional skill(s) into ${OUT}/.`);
+console.log(`✓ installed ${EXTENSION_OUT} (task-scoped, risk-based permission gate)`);
+console.log("Ask for work normally; the agent requests scope automatically. No persona/story command is required.");
 
-console.log(`Activated ${count} skill(s) into ${OUT}/ (11 personas + 1 orientation):\n`);
-console.log(report.join("\n"));
-console.log(`  ✓ iuvareai-sandbox  ${EXTENSION_OUT} (fail-closed permission gate: persona + outputs)`);
-console.log(`\nIn Pi: select a persona with \`/iuvare-persona <name>\`, then bind implementation with \`/iuvare-story <shard>\`.`);
-console.log(`Skills auto-match by description, or force-load with \`/skill:<name>\`.`);
-console.log(`Re-run this script after editing any persona in ${SRC}/ or the Pi integration.`);
+function fail(message) { console.error(`✗ ${message}`); process.exit(1); }

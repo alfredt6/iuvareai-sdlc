@@ -1,53 +1,35 @@
 ---
 okf_version: "0.1"
-title: Iuvare AI SDLC Knowledge Bundle
-description: An OKF-conformant knowledge bundle powering the Iuvare AI-driven SDLC.
+title: Iuvare AI SDLC v4 Lean Knowledge Bundle
+description: Task-scoped, risk-based knowledge and policy for AI software delivery.
 ---
 
 # Iuvare AI SDLC — Knowledge Bundle
 
-This directory is an **[Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)** v0.1 bundle: a git-tracked tree of markdown *concepts* with YAML frontmatter, machine-traversable cross-links, and `index.md` manifests for progressive disclosure. Author- and agent-readable from the same files — no SDK, no translation layer.
+This is an OKF v0.1 bundle. The canonical specification is
+[IUVARE_AI_SDLC_v4.md](IUVARE_AI_SDLC_v4.md).
 
-## Iuvare type vocabulary
-OKF requires exactly one field — `type`. Iuvare defines these values:
+## Type vocabulary
 
-| `type` | Meaning | Lives in |
+| `type` | Meaning | Location |
 |---|---|---|
-| `Specification` | the SDLC blueprint itself | root |
-| `Persona` | an AI role profile (loaded as a skill) | `agents/` |
-| `ProjectSeed` · `ProjectBrief` · `PRD` · `Architecture` · `DataContract` · `UIDesign` | systemic specs | `specs/` |
-| `Story` | a feature implementation shard | `stories/` |
-| `Delta` | a change request against shipped code | `deltas/` |
-| `Policy` | an enforced governance rule | `policies/` |
-| `Methodology` | a procedural reference | `docs/` |
-
-Iuvare-specific fields (`status`, `owner`, `implementer`, `contract_version`, `depends_on`, `delta_type`, …) ride as **producer extensions**; OKF consumers preserve unknown keys (spec §9).
+| `Specification` | canonical SDLC | root |
+| `Persona` | optional expertise lens | `agents/` |
+| `ProjectSeed`, `ProjectBrief`, `PRD`, `Architecture`, `DataContract`, `UIDesign` | systemic project knowledge | `specs/` |
+| `WorkItem` | Standard/Controlled unit of delivery | `tasks/` |
+| `Story`, `Delta` | v3 compatibility work | `stories/`, `deltas/` |
+| `Policy` | enforced rule | `policies/` |
+| `Methodology` | reusable procedure | `docs/` |
 
 ## Manifest
 
-# Roles
-* [agents/](agents/) — the WHO: 11 persona profiles (Analyst → Orchestrator, + UX/UI Designer)
+- [agents/](agents/) — optional expertise lenses
+- [specs/](specs/) — project systemic decisions
+- [tasks/](tasks/) — v4 WorkItems
+- [evidence/](evidence/) — project test, approval, threat, and release evidence
+- [policies/](policies/) — enforced controls
+- [docs/](docs/) — reusable methodology only
+- [stories/](stories/), [deltas/](deltas/) — v3 migration compatibility
+- `sessions/`, `metrics/` — audit and flow data
 
-# Systemic specs
-* [specs/](specs/) — the WHAT: brief, PRD, architecture, data contract (created Phase 1–2)
-
-# Work units
-* [stories/](stories/) — feature cards (YAML frontmatter + status)
-* [deltas/](deltas/) — change requests against shipped code
-
-# Governance & methodology
-* [policies/](policies/) — the MUST: enforced rules (vcs, ci, budget, sandbox, secrets)
-* [docs/](docs/) — the HOW: methodology references (sharding, DoR, state machine, OKF)
-
-# Data layer (NOT OKF concepts)
-* [sessions/](sessions/) — archived agent session logs (`*.jsonl`)
-* [metrics/](metrics/) — per-story cost/quality logs (`*.jsonl`)
-
-## Conformance
-Every `.md` concept under this bundle carries YAML frontmatter with a non-empty
-`type`. `index.md` / `log.md` are reserved (no `type`); `sessions/` and `metrics/`
-are the data layer. Validate:
-
-```bash
-node scripts/okf-conformance.mjs
-```
+Validate with `node scripts/okf-conformance.mjs`.

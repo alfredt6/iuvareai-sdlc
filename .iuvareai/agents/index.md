@@ -1,26 +1,17 @@
-# Personas
+# Optional Expertise Lenses
 
-Role profiles loaded as on-demand skills (only the active-phase persona is kept in
-context). Each carries YAML frontmatter mirroring its permission set
-(`writes_to` / `reads_from`).
+Personas improve reasoning; they do **not** grant file or command permissions.
+The active task capability is the sole runtime authority. Operators never need
+to switch personas to unblock ordinary work.
 
-# Phase 1 — Exploration & Elicitation
-* [The Analyst](analyst.md) — market alignment, scope boundaries, risk → PROJECT_BRIEF.md
-* [The PM](pm.md) — functional & non-functional requirements, epics → PRD.md
+- [Analyst](analyst.md), [PM](pm.md) — discovery and measurable requirements
+- [Architect](architect.md), [UX Designer](ux-designer.md) — technical and experience design
+- [Product Owner](product-owner.md) — difficult decomposition and prioritization
+- [Developer](developer.md) — implementation lens
+- [Code Reviewer](code-reviewer.md), [Test Architect](test-architect.md), [QA](qa.md) — independent verification lenses
+- [Release Manager](release-manager.md) — release/rollback planning
+- [Orchestrator](orchestrator.md) — portfolio coordination, not routine state editing
 
-# Phase 2 — Architectural Mapping & Data Contracts
-* [The Technical Architect](architect.md) — stack, data flow, versioned data contract
-* [The UX/UI Designer](ux-designer.md) — design system, user flows, accessibility, UI specs
-* [The Product Owner](product-owner.md) — shards the PRD into atomic, testable stories
-
-# Phase 3 — Spec-Driven Development
-* [The Developer](developer.md) — context-shielded implementation against the contract
-* [The Code Reviewer](code-reviewer.md) — adversarial security + dependency gate (Gate 3)
-
-# Phase 4 — Verification & Self-Healing
-* [The Test Architect](test-architect.md) — designs edge-case test matrices
-* [The QA Engineer](qa.md) — runs verification + bounded self-healing
-* [The Release Manager](release-manager.md) — owns Gate 4, rollback path, deployment
-
-# Cross-phase
-* [The Orchestrator](orchestrator.md) — sequences stories, enforces DoR, archives sessions/metrics
+Load only what improves the current task. The default coding agent can create
+documentation, source, tests, and safe configuration when exact outputs are
+included in its task grant.

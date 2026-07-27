@@ -22,7 +22,7 @@ const contractMajor = contractVersion.split(".")[0];
 const failures = [];
 let transitioned = 0;
 
-for (const dir of [".iuvareai/stories", ".iuvareai/deltas"]) {
+for (const dir of [".iuvareai/tasks", ".iuvareai/stories", ".iuvareai/deltas"]) {
   if (!existsSync(dir)) continue;
   for (const file of readdirSync(dir).sort()) {
     if (!file.endsWith(".md") || file === "index.md") continue;
@@ -31,24 +31,27 @@ for (const dir of [".iuvareai/stories", ".iuvareai/deltas"]) {
     const fm = parseFrontmatter(text);
     if (!fm) { failures.push(`${path}: missing frontmatter`); continue; }
     if (fm.status === "done") continue;
+    const isV4Task = fm.type === "WorkItem";
+    if (isV4Task && fm.contract_touched !== true) continue;
     if (!fm.contract_version || !/^\d+\.\d+\.\d+$/.test(String(fm.contract_version))) {
-      failures.push(`${path}: open shard has no valid contract_version`);
+      failures.push(`${path}: contract-touching open work has no valid contract_version`);
       continue;
     }
-    const shardMajor = String(fm.contract_version).split(".")[0];
-    if (shardMajor === contractMajor || fm.status === "stale") continue;
+    const workMajor = String(fm.contract_version).split(".")[0];
+    const safeState = isV4Task ? "blocked" : "stale";
+    if (workMajor === contractMajor || fm.status === safeState) continue;
 
     if (!write) {
-      failures.push(`${path}: shard v${shardMajor} is incompatible with contract v${contractMajor}; set status: stale or re-ready against the contract`);
+      failures.push(`${path}: work v${workMajor} is incompatible with contract v${contractMajor}; set status: ${safeState} and re-ready against the contract`);
       continue;
     }
     if (!fm.status || !/^status:\s*[^\r\n]+/m.test(text)) {
-      failures.push(`${path}: cannot transition missing status to stale`);
+      failures.push(`${path}: cannot transition missing status to ${safeState}`);
       continue;
     }
-    writeFileSync(path, text.replace(/^status:\s*[^\r\n]+/m, "status: stale"));
+    writeFileSync(path, text.replace(/^status:\s*[^\r\n]+/m, `status: ${safeState}`));
     transitioned++;
-    console.log(`↻ ${path}: ${fm.status} → stale (contract v${contractMajor})`);
+    console.log(`↻ ${path}: ${fm.status} → ${safeState} (contract v${contractMajor})`);
   }
 }
 
@@ -58,5 +61,5 @@ if (failures.length) {
   if (!write) console.error("  run with --write for the automatic stale transition, then review and commit the shard changes");
   process.exit(1);
 }
-if (write) console.log(`✓ contract-guard: transitioned ${transitioned} shard(s) to stale.`);
-else console.log(`✓ contract-guard: all open shards are compatible or explicitly stale against contract v${contractMajor}.`);
+if (write) console.log(`✓ contract-guard: transitioned ${transitioned} incompatible work item(s).`);
+else console.log(`✓ contract-guard: all contract-touching open work is compatible or explicitly blocked/stale against contract v${contractMajor}.`);

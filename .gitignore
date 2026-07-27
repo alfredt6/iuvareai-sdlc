@@ -19,6 +19,7 @@ Thumbs.db
 
 # Harness skill activation (generated from .iuvareai/agents/ — harness-specific, do not commit)
 .pi/skills/
+.pi/extensions/iuvareai-sandbox.ts
 .claude/skills/
 .cursor/skills/
 

@@ -1,4 +1,7 @@
-# Framework Audit — 2026-07-25
+# Framework Audit — 2026-07-25 (v3.1 historical)
+
+> Superseded by [the v4 Lean remediation audit](FRAMEWORK_AUDIT_V4_2026-07-25.md).
+> This file records the controls that existed before task-scoped authorization.
 
 ## Scope
 

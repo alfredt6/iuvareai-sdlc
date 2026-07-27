@@ -41,3 +41,16 @@ test("done shards are historical and do not become stale", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(readFileSync(shard, "utf8"), /^status: done$/m);
 });
+
+test("v4 contract-touching WorkItems become blocked while unrelated tasks are ignored", () => {
+  const { root } = fixture("done", "2.0.0");
+  mkdirSync(join(root, ".iuvareai/tasks"), { recursive: true });
+  const touching = join(root, ".iuvareai/tasks/TASK-001.md");
+  const unrelated = join(root, ".iuvareai/tasks/TASK-002.md");
+  writeFileSync(touching, `---\ntype: WorkItem\nstatus: ready\ncontract_touched: true\ncontract_version: "1.0.0"\n---\n`);
+  writeFileSync(unrelated, `---\ntype: WorkItem\nstatus: ready\ncontract_touched: false\n---\n`);
+  const result = spawnSync(process.execPath, [script, "--write"], { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(readFileSync(touching, "utf8"), /^status: blocked$/m);
+  assert.match(readFileSync(unrelated, "utf8"), /^status: ready$/m);
+});

@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const templateRoot = resolve(here, "..");
 const target = resolve(process.argv[2] || process.cwd());
 const force = process.argv.includes("--force");
-const ARTIFACT_DIRS = ["specs", "stories", "deltas", "sessions", "metrics"];
+const ARTIFACT_DIRS = ["specs", "tasks", "evidence", "stories", "deltas", "sessions", "metrics"];
 
 console.log("Iuvare AI SDLC — init");
 console.log(`  template: ${templateRoot}`);
@@ -59,8 +59,8 @@ console.log(`\n✓ Iuvare AI SDLC installed into ${target}`);
 console.log("\nNext steps:");
 console.log(`  cd ${target}`);
 console.log("  node scripts/okf-conformance.mjs      # verify the bundle");
-console.log("  node scripts/activate-pi-skills.mjs   # Pi: skills + fail-closed permission gate");
-console.log("  # then /skill:analyst (or /skill:iuvareai-sdlc for orientation).");
+console.log("  node scripts/activate-pi-skills.mjs   # Pi: optional lenses + task-capability gate");
+console.log("  # then ask for work normally; no persona switch is required.");
 
 function abort(message) {
   console.error(`✗ ${message}`);

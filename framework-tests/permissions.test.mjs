@@ -3,56 +3,58 @@ import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { canonicalRepoPath, isSensitivePath, validateRepoPath } from "../scripts/lib-permissions.mjs";
 import {
-  canonicalRepoPath,
-  checkWriteSetFit,
-  isSensitivePath,
-  matchesWritePattern,
-  validateRepoPath,
-} from "../scripts/lib-permissions.mjs";
+  classifyCommand, classifyPathRisk, isPathInScope, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
+} from "../scripts/lib-task-scope.mjs";
 
-function agentsFixture() {
-  const root = mkdtempSync(join(tmpdir(), "iuvare-permissions-"));
-  const agents = join(root, ".iuvareai", "agents");
-  mkdirSync(agents, { recursive: true });
-  writeFileSync(join(agents, "developer.md"), `---\ntype: Persona\npersona: developer\nwrites_to:\n  - "src/"\n  - "tests/"\n---\n`);
-  writeFileSync(join(agents, "test-architect.md"), `---\ntype: Persona\npersona: test-architect\nwrites_to:\n  - "tests/"\n  - ".iuvareai/docs/"\n---\n`);
-  writeFileSync(join(agents, "platform.md"), `---\ntype: Persona\npersona: platform\nwrites_to:\n  - "package.json"\n---\n`);
-  return { root, agents };
-}
+const docsScope = {
+  goal: "Create customer requirements checklist", lane: "direct", risk: "low",
+  reads: ["specs/customer-master/"],
+  writes: ["docs/customer-master/CRT_CUSTOMER_MASTER_REQUIREMENTS_CHECKLIST.md"],
+  commands: ["quality"], verification: ["Markdown lint passes"],
+};
 
-test("write patterns distinguish directories, exact files, and globs", () => {
-  assert.equal(matchesWritePattern("src/a.ts", "src/"), true);
-  assert.equal(matchesWritePattern("src2/a.ts", "src/"), false);
-  assert.equal(matchesWritePattern(".iuvareai/stories/001.md", ".iuvareai/stories/*.md"), true);
-  assert.equal(matchesWritePattern(".iuvareai/stories/nested/001.md", ".iuvareai/stories/*.md"), false);
+test("project documentation is a valid low-risk exact task output", () => {
+  assert.deepEqual(validateTaskScope(docsScope), []);
+  assert.equal(requiredScopeRisk(docsScope), "low");
+  assert.equal(scopeNeedsApproval(docsScope), false);
 });
 
-test("repository paths reject traversal, absolute paths, and Windows separators", () => {
+test("a task grant authorizes exact writes, not its whole directory", () => {
+  assert.equal(isPathInScope(docsScope.writes[0], docsScope.writes), true);
+  assert.equal(isPathInScope("docs/customer-master/OTHER.md", docsScope.writes), false);
+});
+
+test("sensitive and framework paths receive proportionate handling", () => {
+  assert.equal(classifyPathRisk("README.md"), "low");
+  assert.equal(classifyPathRisk("package.json"), "medium");
+  assert.equal(classifyPathRisk(".github/workflows/deploy.yml"), "high");
+  assert.match(validateTaskScope({ ...docsScope, writes: [".env"] }).join("\n"), /forbidden/);
+});
+
+test("declared risk may not understate calculated risk", () => {
+  const errors = validateTaskScope({ ...docsScope, writes: ["package.json"] });
+  assert.match(errors.join("\n"), /understates/);
+});
+
+test("direct lane rejects high-risk output", () => {
+  const errors = validateTaskScope({ ...docsScope, risk: "high", writes: [".github/workflows/ci.yml"] });
+  assert.match(errors.join("\n"), /direct lane/);
+});
+
+test("commands map to task classes", () => {
+  assert.equal(classifyCommand("git diff --stat"), "inspect");
+  assert.equal(classifyCommand("npm test"), "quality");
+  assert.equal(classifyCommand("npm install zod"), "dependency");
+  assert.equal(classifyCommand("npm run db:migrate"), "database");
+  assert.equal(classifyCommand("kubectl deploy app"), "release");
+});
+
+test("repository paths reject traversal and secrets", () => {
   assert.match(validateRepoPath("../package.json"), /inside/);
-  assert.match(validateRepoPath("C:/package.json"), /relative/);
-  assert.match(validateRepoPath("src\\a.ts"), /POSIX/);
-  assert.equal(validateRepoPath("package.json"), null);
-});
-
-test("developer output must fit the developer write set", () => {
-  const { agents } = agentsFixture();
-  assert.deepEqual(checkWriteSetFit({ expectedOutputs: ["src/a.ts", "tests/a.test.ts"], implementer: "developer", track: "genesis", agentsDir: agents }), []);
-  assert.match(checkWriteSetFit({ expectedOutputs: ["package.json"], implementer: "developer", track: "genesis", agentsDir: agents }).join("\n"), /implementer: conductor/);
-});
-
-test("Test Architect owns framework docs, not repository docs", () => {
-  const { agents } = agentsFixture();
-  assert.deepEqual(checkWriteSetFit({ expectedOutputs: [".iuvareai/docs/plan.md"], implementer: "test-architect", track: "genesis", agentsDir: agents }), []);
-  assert.match(checkWriteSetFit({ expectedOutputs: ["docs/onboarding.md"], implementer: "test-architect", track: "genesis", agentsDir: agents })[0], /may not write/);
-});
-
-test("root writes are explicit Conductor actions and bootstrap is Genesis-only", () => {
-  assert.deepEqual(checkWriteSetFit({ expectedOutputs: ["package.json"], implementer: "conductor", track: "genesis", bootstrap: true, conductorReason: "One-time toolchain bootstrap" }), []);
-  assert.deepEqual(checkWriteSetFit({ expectedOutputs: ["package.json"], implementer: "conductor", track: "delta", bootstrap: false, conductorReason: "Human-reviewed dependency update" }), []);
-  assert.match(checkWriteSetFit({ expectedOutputs: ["package.json"], implementer: "conductor", track: "blueprint", bootstrap: true, conductorReason: "x" })[0], /Genesis/);
-  assert.match(checkWriteSetFit({ expectedOutputs: ["package.json"], implementer: "conductor", track: "genesis", bootstrap: true })[0], /conductor_reason/);
-  assert.match(checkWriteSetFit({ expectedOutputs: ["package.json"], implementer: "platform", track: "genesis", agentsDir: agentsFixture().agents })[0], /implementer: conductor/);
+  assert.equal(isSensitivePath(".env.production"), true);
+  assert.equal(isSensitivePath(".env.example"), false);
 });
 
 test("canonical path resolution blocks lexical and symlink escapes", { skip: process.platform === "win32" }, () => {
@@ -61,13 +63,4 @@ test("canonical path resolution blocks lexical and symlink escapes", { skip: pro
   mkdirSync(join(root, "src"));
   symlinkSync(outside, join(root, "src", "escape"));
   assert.throws(() => canonicalRepoPath(root, "src/escape/file.ts"), /escapes/);
-  assert.equal(canonicalRepoPath(root, "src/new.ts"), "src/new.ts");
-});
-
-test("secret detection is precise enough to allow the secrets policy", () => {
-  assert.equal(isSensitivePath(".env.production"), true);
-  assert.equal(isSensitivePath(".env.example"), false);
-  assert.equal(isSensitivePath("keys/prod.pem"), true);
-  assert.equal(isSensitivePath(".iuvareai/policies/secrets.md"), false);
-  assert.equal(isSensitivePath("src/secret-safe-configuration.ts"), false);
 });

@@ -1,98 +1,86 @@
-# Iuvare AI SDLC
+# Iuvare AI SDLC v4 Lean
 
-> An open, **OKF-conformant**, **agent-driven** Software Development Lifecycle for AI-native teams.
+> An open, OKF-conformant, task-scoped SDLC for fast and production-grade AI-assisted software delivery.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![OKF](https://img.shields.io/badge/Open%20Knowledge%20Format-v0.1-blue.svg)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-[![SDLC](https://img.shields.io/badge/SDLC-v3.1-purple.svg)](.iuvareai/IUVARE_AI_SDLC_v3.md)
-
-**Iuvare AI SDLC** is a spec-driven, gate-enforced framework for building software with AI coding agents — Pi, Claude Code, Cursor, or OpenAI Codex. It moves engineering discipline *upstream* into precise specs, versioned data contracts, and automated gates, so fast agents don't accumulate technical debt at machine speed.
-
-The whole framework is an **[Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)** bundle: a portable, machine-traversable knowledge graph that your agents read **and** write — and that works unchanged across every harness.
-
----
-
-## Why
-
-In the AI-native era the bottleneck inverts: time saved typing syntax is reinvested into **Pristine Specification** and **Autonomous Verification**. An agent without hard boundaries accrues debt at machine speed — *including bad specs that propagate at machine speed.* Iuvare disciplines the **specs themselves**, not just the code, via an automated **Definition of Ready**.
+Iuvare v4 keeps enterprise controls while removing mandatory persona switching.
+Agents receive short-lived capabilities for exact task outputs; expertise personas
+are optional lenses. Process scales through **Direct**, **Standard**, and
+**Controlled** lanes according to actual risk.
 
 ## Quick start
 
-**New project (preferred):**
 ```bash
 npx degit alfredt6/iuvareai-sdlc my-project
 cd my-project
-node scripts/okf-conformance.mjs   # → ✓ OKF v0.1 conformance passed
+node scripts/okf-conformance.mjs
+node scripts/activate-pi-skills.mjs
 ```
 
-**Add to an existing project:**
+For an existing project:
+
 ```bash
 git clone https://github.com/alfredt6/iuvareai-sdlc /tmp/iuvareai
-node /tmp/iuvareai/scripts/iuvareai-init.mjs /path/to/existing-project
+node /tmp/iuvareai/scripts/iuvareai-init.mjs /path/to/project
 ```
 
-Then activate the persona skills per-project:
-- **Pi:** `node scripts/activate-pi-skills.mjs` (generates `.pi/skills/` and installs the fail-closed `.pi/extensions/iuvareai-sandbox.ts` permission gate). Select `/iuvare-persona <name>` and, for implementation, `/iuvare-story <shard-path>`.
-- **Claude Code / Cursor:** copy `.iuvareai/agents/*.md` into `.claude/skills/` or `.cursor/skills/`.
+## Normal Pi experience
 
-Then wire project CI and add OS isolation; Pi's direct-tool permission gate is installed by the activation command. See **[Install & Reuse](.iuvareai/docs/install.md)**.
+Ask for the outcome directly. Before mutation, the agent calls
+`iuvare_request_scope` with exact outputs. Low-risk work is automatic; manifests,
+CI/infra, migrations, release, and destructive actions receive proportionate
+human approval. No `/iuvare-persona` or `/iuvare-story` step is required.
 
-## What's inside
-
-```
-iuvareai-sdlc/
-├── .iuvareai/                     # the OKF knowledge bundle
-│   ├── IUVARE_AI_SDLC_v3.md       # the master spec
-│   ├── index.md                   # bundle root + type vocabulary
-│   ├── agents/      (11 personas) # the WHO — role behaviors
-│   ├── policies/    (5 policies)  # the MUST — enforced rules
-│   ├── docs/                      # the HOW — methodology + focused workflow guides
-│   ├── specs/ stories/ deltas/    # created per project (empty here)
-│   └── sessions/ metrics/         # audit + cost/quality logs
-├── integrations/pi/               # runnable Pi permission-gate source
-├── scripts/                       # conformance, DoR, contract-guard, init, activation
-└── framework-tests/               # framework regression suite
+```text
+intent → exact task scope → implement → verify → review/release by risk
 ```
 
-## Core ideas
+Use `/iuvare-status` to inspect the current 60-minute grant and
+`/iuvare-clear` to revoke it.
 
-- **4 intelligence tracks** — Flash / Delta / Blueprint / Genesis — match process weight to risk so a hotfix isn't crushed under greenfield ceremony.
-- **11 personas** — loaded as on-demand skills (only the active phase is in context).
-- **Definition of Ready** — a machine-checked gate that stops un-startable stories before they waste an agent run.
-- **Semver data contracts** — every story cites a contract version; a MAJOR bump auto-flags stale stories so they can't silently generate code against an outdated schema.
-- **Bounded self-healing** — max 3 fix attempts, then escalate. No infinite retry loops, no runaway quota burn.
-- **OKF bundle** — portable across harnesses and organizations; format, not platform.
+## Delivery lanes
 
-## Documentation
+- **Direct** — docs, tests, safe README/config, and small bounded work; session record only.
+- **Standard** — features, fixes, refactors, and normal production changes; compact WorkItem + CI + independent review.
+- **Controlled** — auth, schema/migrations, CI/infra, regulated, destructive, and production-critical work; explicit approval and evidence.
 
-- **[The SDLC spec (v3)](.iuvareai/IUVARE_AI_SDLC_v3.md)** — the full blueprint (16 sections)
-- **[Workflow Guide — Start Here](.iuvareai/docs/complete-workflow.md)** — pick one track and follow one short guide at a time
-- **[Install & Reuse](.iuvareai/docs/install.md)** — scaffolding new projects
-- **[OKF Adoption](.iuvareai/docs/okf.md)** / **[OKF Philosophy](.iuvareai/docs/okf-philosophy.md)** — why a format, not docs
-- **[Sharding](.iuvareai/docs/sharding.md)** · **[Definition of Ready](.iuvareai/docs/definition-of-ready.md)** · **[State Machine](.iuvareai/docs/state-machine.md)**
-- Policies: **[VCS](.iuvareai/policies/vcs.md)** · **[CI](.iuvareai/policies/ci.md)** · **[Budget](.iuvareai/policies/budget.md)** · **[Sandbox](.iuvareai/policies/sandbox.md)** · **[Secrets](.iuvareai/policies/secrets.md)**
+## Repository
 
-## Framework verification
+```text
+.iuvareai/
+├── IUVARE_AI_SDLC_v4.md
+├── agents/       # optional expertise lenses, not permissions
+├── policies/     # risk, CI, VCS, secrets, budget
+├── docs/         # reusable methodology
+├── specs/        # project systemic knowledge
+├── tasks/        # Standard/Controlled WorkItems
+├── evidence/     # project verification/release evidence
+└── sessions/ metrics/
+integrations/pi/  # task-capability runtime gate
+scripts/          # readiness, state, conformance, installer
+framework-tests/  # framework regression suite
+```
+
+Project documentation belongs in root `docs/` and is a normal agent output when
+its exact path is authorized. Project evidence never belongs in reusable
+`.iuvareai/docs/`.
+
+## Validation
 
 ```bash
 node --test framework-tests/*.test.mjs
 node scripts/okf-conformance.mjs
+node scripts/task-check.mjs .iuvareai/tasks/<task>.md
 ```
 
-## Requirements
+## Security boundary
 
-- **Node.js 20+** (for the scripts — stdlib only, no runtime dependencies)
-- **Any agent harness** — Pi, Claude Code, Cursor, or OpenAI Codex
-- **Git**
+The Pi interceptor controls direct reads/writes/commands but is not an OS
+sandbox. Production-adjacent adopters must provide container or micro-VM
+isolation, branch protection, secret scanning, immutable artifacts, provenance,
+environment approval, and rollback automation.
 
-## Status
+See the [canonical specification](.iuvareai/IUVARE_AI_SDLC_v4.md),
+[workflow guide](.iuvareai/docs/complete-workflow.md), and
+[installation guide](.iuvareai/docs/install.md).
 
-v3.1 — implementability hardening and framework regression tests are complete. Pi's direct-tool permission gate ships with activation. Production-adjacent adopters must still provide OS isolation, branch protection, secret scanning, environment approvals, and rollback controls described by the policies. See the [framework audit](docs/FRAMEWORK_AUDIT_2026-07-25.md).
-
-## License
-
-[MIT](LICENSE) — free for personal and commercial use.
-
-## Contributing
-
-Issues and pull requests are welcome. This is an open standard-in-progress; changes must preserve OKF conformance and declare any SDLC schema compatibility impact.
+MIT licensed.
