@@ -21,6 +21,11 @@ const COMMAND_RISK = {
   inspect: "low", quality: "low", build: "low", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
+const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
+
+export function isSupportedImagePath(path) {
+  return typeof path === "string" && SUPPORTED_IMAGE_RE.test(path);
+}
 
 export function compareRisk(left, right) {
   return (RISK_INDEX.get(left) ?? -1) - (RISK_INDEX.get(right) ?? -1);

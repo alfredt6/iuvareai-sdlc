@@ -36,6 +36,8 @@ test("installer and Pi activation ship the runnable permission gate", () => {
   assert.equal(existsSync(gatePath), true);
   const gate = readFileSync(gatePath, "utf8");
   assert.match(gate, /iuvare_request_scope/);
+  assert.match(gate, /iuvare-vision/);
+  assert.match(gate, /image input/);
   assert.doesNotMatch(gate, /iuvare-persona/);
   assert.match(activate.stdout, /task-scoped, risk-based permission gate/);
 });

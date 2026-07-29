@@ -75,6 +75,9 @@ Rules:
 
 - `writes` contains exact files—never repository-wide access.
 - `reads` contains exact files or directory prefixes and excludes secrets/PII.
+  Design screenshots and image directories are valid read inputs.
+- For visual implementation, inspect each relevant image before coding using a
+  vision-capable model; never infer design content from filenames alone.
 - A replacement scope is requested when work legitimately grows.
 - Grants expire after 60 minutes by default and are retained in the session log.
 - Low-risk normal work is auto-authorized from the explicit user task.
@@ -185,7 +188,10 @@ docs/                          # project/product/operations documentation
 src/ tests/                    # implementation and verification
 ```
 
-Project evidence never goes in `.iuvareai/docs/`. Framework files are protected
+Supported raster design inputs are `jpg`, `jpeg`, `png`, `gif`, `webp`, and
+`bmp`. Pi's `read` tool sends these as model attachments. SVG can be inspected as
+text, but a raster screenshot is required when rendered appearance is the source
+of truth. Project evidence never goes in `.iuvareai/docs/`. Framework files are protected
 high-risk paths; project artifacts remain writable through exact task grants.
 
 ## 11. Security layers

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { canonicalRepoPath, isSensitivePath, validateRepoPath } from "../scripts/lib-permissions.mjs";
 import {
-  classifyCommand, classifyPathRisk, isPathInScope, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
+  classifyCommand, classifyPathRisk, isPathInScope, isSupportedImagePath, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
 } from "../scripts/lib-task-scope.mjs";
 
 const docsScope = {
@@ -24,6 +24,14 @@ test("project documentation is a valid low-risk exact task output", () => {
 test("a task grant authorizes exact writes, not its whole directory", () => {
   assert.equal(isPathInScope(docsScope.writes[0], docsScope.writes), true);
   assert.equal(isPathInScope("docs/customer-master/OTHER.md", docsScope.writes), false);
+});
+
+test("design images are valid low-risk task inputs", () => {
+  const scope = { ...docsScope, reads: ["docs/YBO-Screenshots/", "docs/website/home.png"] };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(isPathInScope("docs/YBO-Screenshots/mobile.webp", scope.reads), true);
+  assert.equal(isSupportedImagePath("docs/website/home.png"), true);
+  assert.equal(isSupportedImagePath("docs/website/design.svg"), false);
 });
 
 test("sensitive and framework paths receive proportionate handling", () => {

@@ -4,7 +4,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { canonicalRepoPath, isSensitivePath } from "../../scripts/lib-permissions.mjs";
 import {
-  classifyCommand, isPathInScope, maxRisk, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
+  classifyCommand, isPathInScope, isSupportedImagePath, maxRisk, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
 } from "../../scripts/lib-task-scope.mjs";
 
 type Lane = "direct" | "standard" | "controlled";
@@ -28,9 +28,14 @@ export default function (pi: ExtensionAPI) {
     showStatus(ctx);
   });
 
-  pi.on("before_agent_start", (event) => ({
-    systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.`,
-  }));
+  pi.on("before_agent_start", (event, ctx) => {
+    const vision = ctx.model?.input.includes("image")
+      ? "The current model supports image input."
+      : "WARNING: the current model does not advertise image input; switch to a vision-capable model before implementing from visual references.";
+    return {
+      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- ${vision}`,
+    };
+  });
 
   pi.registerTool({
     name: "iuvare_request_scope",
@@ -42,7 +47,7 @@ export default function (pi: ExtensionAPI) {
       goal: Type.String({ description: "One-sentence outcome" }),
       lane: StringEnum(["direct", "standard", "controlled"] as const),
       risk: StringEnum(["low", "medium", "high", "critical"] as const),
-      reads: Type.Array(Type.String(), { description: "Exact files or directory prefixes ending in /" }),
+      reads: Type.Array(Type.String(), { description: "Exact files or directory prefixes ending in /. Include design-image files/directories needed by the task." }),
       writes: Type.Array(Type.String(), { description: "Exact output files; directory-wide writes are rejected" }),
       commands: Type.Array(StringEnum(["inspect", "quality", "build", "dependency", "database", "network", "release", "destructive"] as const)),
       verification: Type.Array(Type.String()),
@@ -68,9 +73,14 @@ export default function (pi: ExtensionAPI) {
       grant = { ...candidate, risk: maxRisk(candidate.risk, requiredRisk) as Risk, approvedAt: now, expiresAt: now + TTL_MS, approval };
       pi.appendEntry("iuvare-task-grant", grant);
       showStatus(ctx);
+      const imageInputs = candidate.reads.filter(isSupportedImagePath);
+      const visionWarning = imageInputs.length > 0 && !ctx.model?.input.includes("image")
+        ? " WARNING: image inputs were authorized, but the current model is not vision-capable. Switch models before implementation."
+        : "";
+      if (visionWarning && ctx.hasUI) ctx.ui.notify(visionWarning.trim(), "warning");
       return {
-        content: [{ type: "text", text: `Authorized ${grant.lane}/${grant.risk} scope for ${grant.writes.length} exact output(s). Proceed within scope.` }],
-        details: { grant },
+        content: [{ type: "text", text: `Authorized ${grant.lane}/${grant.risk} scope for ${grant.writes.length} exact output(s). Proceed within scope.${visionWarning}` }],
+        details: { grant, imageInputs, visionCapable: ctx.model?.input.includes("image") ?? false },
       };
     },
   });
@@ -78,6 +88,18 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("iuvare-status", {
     description: "Show the active task capability",
     handler: async (_args, ctx) => showStatus(ctx, true),
+  });
+  pi.registerCommand("iuvare-vision", {
+    description: "Report whether the current model can inspect design images",
+    handler: async (_args, ctx) => {
+      const supported = ctx.model?.input.includes("image") ?? false;
+      ctx.ui.notify(
+        supported
+          ? `Vision ready: ${ctx.model?.provider}/${ctx.model?.id} can inspect jpg/jpeg/png/gif/webp/bmp files with read.`
+          : `Vision unavailable: ${ctx.model?.provider}/${ctx.model?.id} does not advertise image input. Use /model to select a vision-capable model.`,
+        supported ? "info" : "warning",
+      );
+    },
   });
   pi.registerCommand("iuvare-clear", {
     description: "Revoke the active task capability",

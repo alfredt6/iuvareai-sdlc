@@ -13,4 +13,8 @@ authorization: task-scope
 Use for user flows, information architecture, design tokens, component states,
 responsive behavior, and WCAG 2.2 AA acceptance. Specify only the affected
 experience boundary and include error, loading, empty, keyboard, and focus
-states. Create design documents or token files when authorized by task scope.
+states. Inspect supplied screenshots and visual references directly with `read`
+using a vision-capable model. Treat raster images as evidence, not executable
+specification: record ambiguities and reconcile them with accessibility and
+responsive requirements. Create design documents or token files when authorized
+by task scope.

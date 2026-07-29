@@ -40,6 +40,8 @@ Do not ask the operator to select a persona. Before mutation, call
 \`iuvare_request_scope\` alone with exact writes, minimal reads, command classes,
 and verification. Low-risk work auto-authorizes; sensitive scope asks once.
 Personas are optional expertise lenses and never grant permissions.
+For visual work, include design image files/directories in task reads, run
+\`/iuvare-vision\`, and inspect supported images with \`read\` before coding.
 `);
 mkdirSync(join(".pi", "extensions"), { recursive: true });
 copyFileSync(EXTENSION_SRC, EXTENSION_OUT);

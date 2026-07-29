@@ -14,6 +14,9 @@ This project follows **Iuvare AI SDLC v4 Lean**. Read
   `.iuvareai/tasks/*.md` work item and `node scripts/task-check.mjs <path>`.
 - Keep changes small, verify them, and show the diff. Use an independent checker
   for Standard/Controlled work.
+- Design images are first-class task inputs. Add their exact files or containing
+  directory to the task `reads`, inspect them with the built-in `read` tool before
+  UI implementation, and use a model that advertises image input.
 
 ## Repository boundaries
 
@@ -38,3 +41,11 @@ node scripts/task-check.mjs <work-item> # Standard/Controlled project work
 ```
 
 OS isolation remains mandatory for production-adjacent shell execution.
+
+## Visual references
+
+Pi can send `jpg`, `jpeg`, `png`, `gif`, `webp`, and `bmp` files to a
+vision-capable model through `read`. Use `/iuvare-vision` to check the active
+model. `terminal.showImages` controls terminal display only; `images.blockImages`
+must remain `false` for model inspection. SVG is readable as source text; provide
+a raster screenshot when visual rendering fidelity matters.

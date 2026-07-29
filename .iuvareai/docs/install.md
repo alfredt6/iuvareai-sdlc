@@ -32,8 +32,10 @@ creates project artifact directories including `tasks/` and `evidence/`. Existin
 Activation installs optional expertise skills and the task-capability extension.
 The operator does **not** select a persona. On a mutating request, the agent calls
 `iuvare_request_scope`; low-risk work proceeds automatically and sensitive work
-shows one approval preview. Use `/iuvare-status` or `/iuvare-clear` only for
-inspection/revocation.
+shows one approval preview. Use `/iuvare-status` for scope inspection,
+`/iuvare-vision` to verify the model can inspect images, and `/iuvare-clear` for
+revocation. Design screenshots belong in task `reads` and are opened with Pi's
+built-in `read` tool.
 
 ## Project setup
 
