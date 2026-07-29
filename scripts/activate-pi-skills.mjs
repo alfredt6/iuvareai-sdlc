@@ -1,6 +1,7 @@
 // Generate optional Pi expertise skills and install the v4 task-capability gate.
 import { copyFileSync, readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const SRC = ".iuvareai/agents";
 const OUT = ".pi/skills";
@@ -42,6 +43,8 @@ and verification. Low-risk work auto-authorizes; sensitive scope asks once.
 Personas are optional expertise lenses and never grant permissions.
 For visual work, include design image files/directories in task reads, run
 \`/iuvare-vision\`, and inspect supported images with \`read\` before coding.
+For crop/resize/rotate/convert/adjust operations, request the image class and use
+\`iuvare_image_operation\`, then inspect the output with \`read\`.
 For copy/move/mkdir, request the filesystem class with scoped destinations and
 use \`iuvare_file_operation\`, never raw shell transfer commands.
 `);
@@ -49,6 +52,14 @@ mkdirSync(join(".pi", "extensions"), { recursive: true });
 copyFileSync(EXTENSION_SRC, EXTENSION_OUT);
 console.log(`Activated ${entries.length + 1} optional skill(s) into ${OUT}/.`);
 console.log(`✓ installed ${EXTENSION_OUT} (task-scoped, risk-based permission gate)`);
+if (!hasPillow()) console.warn("! image editing requires Python 3 + Pillow: python -m pip install Pillow");
 console.log("Ask for work normally; the agent requests scope automatically. No persona/story command is required.");
+
+function hasPillow() {
+  const candidates = process.platform === "win32"
+    ? [["py", ["-3"]], ["python", []], ["python3", []]]
+    : [["python3", []], ["python", []]];
+  return candidates.some(([command, args]) => spawnSync(command, [...args, "-c", "import PIL"], { stdio: "ignore" }).status === 0);
+}
 
 function fail(message) { console.error(`✗ ${message}`); process.exit(1); }

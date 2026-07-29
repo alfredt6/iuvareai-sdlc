@@ -16,5 +16,7 @@ experience boundary and include error, loading, empty, keyboard, and focus
 states. Inspect supplied screenshots and visual references directly with `read`
 using a vision-capable model. Treat raster images as evidence, not executable
 specification: record ambiguities and reconcile them with accessibility and
-responsive requirements. Create design documents or token files when authorized
-by task scope.
+responsive requirements. Use `iuvare_image_operation` for authorized image
+metadata, crop, resize, rotation, format conversion, and visual adjustments,
+then inspect the generated output with `read`. Create design documents, edited
+assets, or token files when authorized by task scope.

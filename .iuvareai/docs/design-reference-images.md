@@ -31,6 +31,35 @@ them directly; no special persona permission is required.
 5. Implement and compare the result against the references. Standard/Controlled
    UI work should receive independent visual and accessibility verification.
 
+## Crop and edit images
+
+Request the source in `reads`, the exact result in `writes`, and the `image`
+command class. Use `iuvare_image_operation` rather than an unclassified shell
+utility:
+
+```yaml
+reads: [docs/source.png]
+writes: [docs/assets/hero-cropped.webp]
+write_trees: []
+deletes: []
+commands: [image]
+```
+
+The tool can inspect pixel dimensions and frame count, then crop, resize
+(`stretch`, `contain`, or `cover`), rotate, flip, convert formats, adjust
+brightness/contrast/saturation/sharpness, blur, and make grayscale output. Use
+`action: convert`; the exact target extension selects JPEG, PNG, GIF, WebP, or
+BMP. Animated sources retain all frames when targeting GIF or WebP; conversion
+to a static format is rejected rather than silently dropping frames. Edits run
+in that order. Existing targets require explicit overwrite authorization.
+After editing, call `read` on the output to verify the visual result.
+
+The local runtime needs Python 3 with Pillow:
+
+```bash
+python -m pip install Pillow
+```
+
 ## Pi settings and input options
 
 - `images.blockImages` must be `false` (default).

@@ -81,6 +81,9 @@ Rules:
   Design screenshots and image directories are valid read inputs.
 - For visual implementation, inspect each relevant image before coding using a
   vision-capable model; never infer design content from filenames alone.
+- Crop, resize, rotate, flip, convert, and adjust raster images through
+  `iuvare_image_operation` with the source in `reads`, exact target in `writes`,
+  and the `image` command class.
 - A replacement scope is requested when work legitimately grows.
 - Grants expire after 60 minutes by default and are retained in the session log.
 - Low-risk normal work is auto-authorized from the explicit user task.
@@ -94,7 +97,7 @@ Rules:
 
 | Risk | Examples | Approval |
 |---|---|---|
-| **Low** | `docs/`, `src/`, `tests/`, safe README changes, inspection, tests | Automatic task grant |
+| **Low** | `docs/`, `src/`, `tests/`, safe README changes, image transforms, inspection, tests | Automatic task grant |
 | **Medium** | Dependencies, manifests, lockfiles, build config, network calls | Scope preview + human confirmation |
 | **High** | CI, agent/framework policy, infrastructure, migrations, database mutation | Controlled lane + human confirmation + independent review |
 | **Critical** | Production deployment, destructive data/files, privilege changes | Exact-action approval, expiry/replay protection, audit |

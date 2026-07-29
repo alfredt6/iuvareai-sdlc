@@ -26,9 +26,15 @@ test("a task grant authorizes exact writes, not its whole directory", () => {
   assert.equal(isPathInScope("docs/customer-master/OTHER.md", docsScope.writes), false);
 });
 
-test("design images are valid low-risk task inputs", () => {
-  const scope = { ...docsScope, reads: ["docs/YBO-Screenshots/", "docs/website/home.png"] };
+test("design images are valid low-risk inputs and exact transform outputs", () => {
+  const scope = {
+    ...docsScope,
+    reads: ["docs/YBO-Screenshots/", "docs/website/home.png"],
+    writes: ["docs/website/home-cropped.webp"],
+    commands: ["image"],
+  };
   assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(scopeNeedsApproval(scope), false);
   assert.equal(isPathInScope("docs/YBO-Screenshots/mobile.webp", scope.reads), true);
   assert.equal(isSupportedImagePath("docs/website/home.png"), true);
   assert.equal(isSupportedImagePath("docs/website/design.svg"), false);
@@ -71,6 +77,7 @@ test("commands map to task classes", () => {
   assert.equal(classifyCommand("git diff --stat"), "inspect");
   assert.equal(classifyCommand("cp -r docs/a docs/b"), "filesystem");
   assert.equal(classifyCommand("mv docs/a docs/b"), "filesystem");
+  assert.equal(classifyCommand("magick source.png target.webp"), "image");
   assert.equal(classifyCommand("npm test"), "quality");
   assert.equal(classifyCommand("npm install zod"), "dependency");
   assert.equal(classifyCommand("npm run db:migrate"), "database");

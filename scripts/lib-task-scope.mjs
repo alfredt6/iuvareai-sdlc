@@ -3,7 +3,7 @@ import { isSensitivePath, validateRepoPath } from "./lib-permissions.mjs";
 export const LANES = new Set(["direct", "standard", "controlled"]);
 export const RISKS = ["low", "medium", "high", "critical"];
 export const COMMAND_CLASSES = new Set([
-  "inspect", "quality", "build", "filesystem", "dependency", "database", "network", "release", "destructive",
+  "inspect", "quality", "build", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
 ]);
 
 const RISK_INDEX = new Map(RISKS.map((risk, index) => [risk, index]));
@@ -18,7 +18,7 @@ const MEDIUM_PATHS = [
   /^\.iuvareai\/(specs|tasks|stories|deltas)\//,
 ];
 const COMMAND_RISK = {
-  inspect: "low", quality: "low", build: "low", filesystem: "medium", dependency: "medium", network: "medium",
+  inspect: "low", quality: "low", build: "low", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
 const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
@@ -116,6 +116,7 @@ export function classifyCommand(command) {
   if (/^node\s+(--test\b|scripts\/(task-check|dor-check|contract-guard|okf-conformance)\.mjs\b)/.test(value)) return "quality";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+build(\s|$)/.test(value)) return "build";
   if (/^(cp|mv|rsync|mkdir|copy|move|xcopy|robocopy)(\s|$)/i.test(value)) return "filesystem";
+  if (/^(magick|convert|mogrify)(\s|$)/i.test(value)) return "image";
   if (/^(npm|pnpm|yarn|bun)\s+(install|add|remove|update)(\s|$)/.test(value)) return "dependency";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+db:(generate|push|migrate)(\s|$)/.test(value)) return "database";
   if (/^(curl|wget|gh\s+api)(\s|$)/.test(value)) return "network";

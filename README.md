@@ -37,8 +37,10 @@ intent → exact task scope → implement → verify → review/release by risk
 Use `/iuvare-status` to inspect the current 60-minute grant,
 `/iuvare-vision` to check image support, and `/iuvare-clear` to revoke it.
 Design screenshots can be listed in task `reads` and inspected through Pi's
-built-in `read` tool before UI implementation. Copy/move/mkdir operations use
-the scoped `iuvare_file_operation` tool rather than raw shell commands.
+built-in `read` tool before UI implementation. Agents can crop, resize, rotate,
+convert, and visually adjust authorized images with `iuvare_image_operation`.
+Copy/move/mkdir operations use the scoped `iuvare_file_operation` tool rather
+than raw shell commands.
 
 ## Delivery lanes
 

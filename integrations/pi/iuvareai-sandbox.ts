@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { cp, lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
@@ -36,7 +37,7 @@ export default function (pi: ExtensionAPI) {
       ? "The current model supports image input."
       : "WARNING: the current model does not advertise image input; switch to a vision-capable model before implementing from visual references.";
     return {
-      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- For copy, move, or directory creation, request the filesystem command class plus exact writes or approved write_trees/deletes, then use iuvare_file_operation. Do not use raw cp/mv/rsync/mkdir.\n- ${vision}`,
+      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- To crop, resize, rotate, flip, convert, or adjust an image, request the image command class with the source in reads and exact target in writes, then use iuvare_image_operation and inspect the result with read.\n- For copy, move, or directory creation, request the filesystem command class plus exact writes or approved write_trees/deletes, then use iuvare_file_operation. Do not use raw cp/mv/rsync/mkdir.\n- ${vision}`,
     };
   });
 
@@ -54,7 +55,7 @@ export default function (pi: ExtensionAPI) {
       writes: Type.Array(Type.String(), { description: "Exact output files for write/edit and file operations" }),
       write_trees: Type.Array(Type.String(), { description: "Directory prefixes ending in /, usable only by iuvare_file_operation; always human-previewed" }),
       deletes: Type.Array(Type.String(), { description: "Exact source files/directories authorized to be removed by a move" }),
-      commands: Type.Array(StringEnum(["inspect", "quality", "build", "filesystem", "dependency", "database", "network", "release", "destructive"] as const)),
+      commands: Type.Array(StringEnum(["inspect", "quality", "build", "image", "filesystem", "dependency", "database", "network", "release", "destructive"] as const)),
       verification: Type.Array(Type.String()),
     }),
     async execute(_id, params, _signal, _update, ctx) {
@@ -158,6 +159,78 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  pi.registerTool({
+    name: "iuvare_image_operation",
+    label: "Iuvare Image Operation",
+    description: "Inspect image dimensions or safely crop, resize, rotate, flip, convert, and adjust a scoped image. Editing requires Pillow on the local Python runtime.",
+    promptSnippet: "Inspect and edit repository images with exact source and output authorization",
+    promptGuidelines: [
+      "Use iuvare_image_operation for image metadata and edits; inspect the source and edited output with read when visual fidelity matters.",
+      "Image transforms run in this order: crop, resize, rotate, flip, color/sharpness adjustments, blur, grayscale.",
+    ],
+    parameters: Type.Object({
+      action: StringEnum(["inspect", "edit", "convert"] as const),
+      source: Type.String({ description: "Repository-relative jpg/jpeg/png/gif/webp/bmp source" }),
+      target: Type.Optional(Type.String({ description: "Exact repository-relative output path; required for edit or convert" })),
+      overwrite: Type.Optional(Type.Boolean({ description: "Allow replacing an existing exact target; default false" })),
+      crop: Type.Optional(Type.Object({
+        x: Type.Integer({ minimum: 0 }), y: Type.Integer({ minimum: 0 }),
+        width: Type.Integer({ minimum: 1 }), height: Type.Integer({ minimum: 1 }),
+      })),
+      resize: Type.Optional(Type.Object({
+        width: Type.Optional(Type.Integer({ minimum: 1 })),
+        height: Type.Optional(Type.Integer({ minimum: 1 })),
+        fit: Type.Optional(StringEnum(["stretch", "contain", "cover"] as const)),
+      })),
+      rotate: Type.Optional(Type.Number({ description: "Clockwise degrees; canvas expands" })),
+      flip: Type.Optional(StringEnum(["horizontal", "vertical", "both"] as const)),
+      brightness: Type.Optional(Type.Number({ minimum: 0, description: "1 is unchanged" })),
+      contrast: Type.Optional(Type.Number({ minimum: 0, description: "1 is unchanged" })),
+      saturation: Type.Optional(Type.Number({ minimum: 0, description: "1 is unchanged" })),
+      sharpness: Type.Optional(Type.Number({ minimum: 0, description: "1 is unchanged" })),
+      blur: Type.Optional(Type.Number({ minimum: 0, description: "Gaussian blur radius" })),
+      grayscale: Type.Optional(Type.Boolean()),
+      quality: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+      background: Type.Optional(Type.String({ description: "Color used when flattening transparency to JPEG; default #ffffff" })),
+    }),
+    async execute(_id, params, signal, _update, ctx) {
+      const source = canonicalRepoPath(ctx.cwd, params.source);
+      if (isSensitivePath(source)) throw new Error(`sensitive path is excluded from context: ${source}`);
+      if (!isSupportedImagePath(source)) throw new Error("source must be jpg, jpeg, png, gif, webp, or bmp");
+      if (grant && !isPathInScope(source, [...grant.reads, ...grant.writes, ...(grant.writeTrees ?? [])]))
+        throw new Error(`source '${source}' is outside the active task read scope`);
+      const sourceAbsolute = resolve(ctx.cwd, source);
+
+      if (params.action === "inspect") {
+        const result = await runImageHelper(ctx.cwd, { action: "inspect", source: sourceAbsolute }, signal);
+        return {
+          content: [{ type: "text", text: `${source}: ${result.width}×${result.height} ${result.format} (${result.frames} frame(s), ${result.mode})` }],
+          details: { ...result, source },
+        };
+      }
+
+      if (!grant || grant.expiresAt <= Date.now()) throw new Error("no active task scope; call iuvare_request_scope first");
+      if (!grant.commands.includes("image")) throw new Error("active task scope does not authorize the image command class");
+      if (!params.target) throw new Error(`${params.action} requires target`);
+      const target = canonicalRepoPath(ctx.cwd, params.target);
+      if (!isSupportedImagePath(target)) throw new Error("target must be jpg, jpeg, png, gif, webp, or bmp");
+      if (!grant.writes.includes(target)) throw new Error(`target '${target}' is not an exact output in the active task writes`);
+      const targetAbsolute = resolve(ctx.cwd, target);
+      if (await pathExists(targetAbsolute) && !params.overwrite)
+        throw new Error(`target already exists: ${target}; set overwrite only when replacement was intended`);
+
+      const request = { ...params, source: sourceAbsolute, target: targetAbsolute };
+      const result = await withFileMutationQueue(targetAbsolute, async () => {
+        await mkdir(dirname(targetAbsolute), { recursive: true });
+        return runImageHelper(ctx.cwd, request, signal);
+      });
+      return {
+        content: [{ type: "text", text: `${params.action === "convert" ? "Converted" : "Edited"} ${source} → ${target} (${result.width}×${result.height} ${result.format}). Inspect the output with read.` }],
+        details: { ...result, source, target },
+      };
+    },
+  });
+
   pi.registerCommand("iuvare-status", {
     description: "Show the active task capability",
     handler: async (_args, ctx) => showStatus(ctx, true),
@@ -214,6 +287,8 @@ export default function (pi: ExtensionAPI) {
       if (commandClass === "inspect") return;
       if (commandClass === "filesystem")
         return block("raw cp/mv/rsync/mkdir is disabled; use iuvare_file_operation with task-scoped sources and targets");
+      if (commandClass === "image")
+        return block("raw image shell utilities are disabled; use iuvare_image_operation with an exact scoped output");
       if (!grant) return block("no active task scope; call iuvare_request_scope first");
       if (!commandClass) return block("command is not classifiable by policy; use a supported command or update the policy");
       if (!grant.commands.includes(commandClass)) return block(`command class '${commandClass}' is outside the active task scope`);
@@ -231,6 +306,45 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.setStatus("iuvare-sandbox", label);
     if (notify) ctx.ui.notify(label, grant ? "info" : "warning");
   }
+}
+
+async function runImageHelper(cwd: string, request: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
+  const helper = resolve(cwd, "scripts/image-operation.py");
+  const candidates: Array<[string, string[]]> = process.platform === "win32"
+    ? [["py", ["-3"]], ["python", []], ["python3", []]]
+    : [["python3", []], ["python", []]];
+  let missing = 0;
+  let pillowMissing = 0;
+  for (const [executable, prefix] of candidates) {
+    try {
+      return await new Promise((accept, reject) => {
+        const child = spawn(executable, [...prefix, helper], { cwd, windowsHide: true, signal });
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (chunk) => { stdout += chunk; });
+        child.stderr.on("data", (chunk) => { stderr += chunk; });
+        child.on("error", reject);
+        child.on("close", (code) => {
+          if (code !== 0) {
+            const failure = new Error(stderr.trim() || `image helper exited with code ${code}`) as NodeJS.ErrnoException;
+            if (code === 3) failure.code = "IUVARE_PILLOW_MISSING";
+            return reject(failure);
+          }
+          try { accept(JSON.parse(stdout)); }
+          catch { reject(new Error(`image helper returned invalid output: ${stdout.slice(0, 500)}`)); }
+        });
+        child.stdin.end(JSON.stringify(request));
+      });
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") { missing += 1; continue; }
+      if (code === "IUVARE_PILLOW_MISSING") { pillowMissing += 1; continue; }
+      throw error;
+    }
+  }
+  if (missing + pillowMissing === candidates.length)
+    throw new Error("Python 3 with Pillow is required for image editing; install it with `python -m pip install Pillow`");
+  throw new Error("unable to start the image helper");
 }
 
 async function pathExists(path: string) {

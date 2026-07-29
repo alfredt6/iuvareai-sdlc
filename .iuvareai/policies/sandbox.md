@@ -20,6 +20,8 @@ command classes, verification, approval, and expiry.
 
 - No grant: safe repository discovery reads and inspection commands only.
 - Active grant: reads and writes must fit the scope; built-in writes are exact files.
+- Image transforms: use `iuvare_image_operation` with an authorized read source,
+  exact write target, and the low-risk `image` command class.
 - Copy/move/mkdir: use `iuvare_file_operation`; destination trees and move
   deletions receive a human preview. Raw shell transfer commands are blocked.
 - Expansion: replace the grant explicitly; never silently widen it.

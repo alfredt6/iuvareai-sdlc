@@ -26,6 +26,7 @@ test("installer and Pi activation ship the runnable permission gate", () => {
   assert.equal(existsSync(join(target, "integrations", "pi", "iuvareai-sandbox.ts")), true);
   assert.equal(existsSync(join(target, ".iuvareai", "tasks")), true);
   assert.equal(existsSync(join(target, ".iuvareai", "evidence")), true);
+  assert.equal(existsSync(join(target, "scripts", "image-operation.py")), true);
 
   const activate = spawnSync(process.execPath, [join(target, "scripts", "activate-pi-skills.mjs")], {
     cwd: target,
@@ -37,6 +38,7 @@ test("installer and Pi activation ship the runnable permission gate", () => {
   const gate = readFileSync(gatePath, "utf8");
   assert.match(gate, /iuvare_request_scope/);
   assert.match(gate, /iuvare_file_operation/);
+  assert.match(gate, /iuvare_image_operation/);
   assert.match(gate, /write_trees/);
   assert.match(gate, /iuvare-vision/);
   assert.match(gate, /image input/);
