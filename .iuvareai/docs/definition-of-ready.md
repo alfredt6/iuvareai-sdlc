@@ -13,8 +13,10 @@ Controlled WorkItems must pass:
 - legal lane, risk, and lifecycle state;
 - non-empty goal, acceptance, and verification;
 - safe repository-relative reads and exact write files;
+- optional `write_trees` ending in `/` for destination trees and `deletes` for
+  move sources;
 - existing read inputs when files are named;
-- declared command classes;
+- declared command classes, including `filesystem` for file operations;
 - risk declaration at least as high as path/action policy requires;
 - Controlled lane for high/critical work;
 - contract version only when `contract_touched: true`.

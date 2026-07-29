@@ -18,4 +18,7 @@ checks, and show the diff. When screenshots or design images are provided, inclu
 them in task reads and inspect each relevant view with `read` before implementation;
 do not infer the design from filenames. Use a vision-capable model and verify layout,
 spacing, typography, color, states, and responsive intent against the references.
+For file or directory transfers, request a task scope with the `filesystem`
+command class and use `iuvare_file_operation`; never fall back to raw
+`cp`/`mv`/`rsync`/`mkdir`. A move also requires its source in `deletes`.
 Never read secrets or silently change unrelated behavior.

@@ -73,7 +73,10 @@ verification:
 
 Rules:
 
-- `writes` contains exact files—never repository-wide access.
+- `writes` contains exact files for built-in write/edit operations.
+- `write_trees` contains human-previewed destination directory prefixes used
+  only by the dedicated file-operation tool.
+- `deletes` names source files/directories that a move may remove.
 - `reads` contains exact files or directory prefixes and excludes secrets/PII.
   Design screenshots and image directories are valid read inputs.
 - For visual implementation, inspect each relevant image before coding using a
@@ -83,6 +86,8 @@ Rules:
 - Low-risk normal work is auto-authorized from the explicit user task.
 - Medium/high scope receives one human preview and confirmation.
 - Critical actions receive parameter-bound approval again at execution time.
+- Copy, move, and directory creation use `iuvare_file_operation` with the
+  `filesystem` command class; raw `cp`/`mv`/`rsync`/`mkdir` stay blocked.
 - Non-interactive runs fail closed when human approval is required.
 
 ## 5. Risk classification
@@ -113,6 +118,8 @@ risk: medium
 status: proposed
 reads: [src/customer/import.ts]
 writes: [src/customer/import.ts, tests/customer/import.test.ts]
+write_trees: []
+deletes: []
 commands: [quality, build]
 acceptance:
   - Invalid rows are rejected with row-level reasons

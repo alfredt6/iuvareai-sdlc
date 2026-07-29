@@ -3,7 +3,7 @@ import { isSensitivePath, validateRepoPath } from "./lib-permissions.mjs";
 export const LANES = new Set(["direct", "standard", "controlled"]);
 export const RISKS = ["low", "medium", "high", "critical"];
 export const COMMAND_CLASSES = new Set([
-  "inspect", "quality", "build", "dependency", "database", "network", "release", "destructive",
+  "inspect", "quality", "build", "filesystem", "dependency", "database", "network", "release", "destructive",
 ]);
 
 const RISK_INDEX = new Map(RISKS.map((risk, index) => [risk, index]));
@@ -18,7 +18,7 @@ const MEDIUM_PATHS = [
   /^\.iuvareai\/(specs|tasks|stories|deltas)\//,
 ];
 const COMMAND_RISK = {
-  inspect: "low", quality: "low", build: "low", dependency: "medium", network: "medium",
+  inspect: "low", quality: "low", build: "low", filesystem: "medium", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
 const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
@@ -47,11 +47,13 @@ export function classifyPathRisk(path) {
   return "low";
 }
 
-export function requiredScopeRisk({ lane, writes = [], commands = [] }) {
+export function requiredScopeRisk({ lane, writes = [], writeTrees = [], deletes = [], commands = [] }) {
   const laneRisk = lane === "controlled" ? "high" : "low";
   return maxRisk(
     laneRisk,
     ...writes.map(classifyPathRisk),
+    ...writeTrees.map((path) => maxRisk("medium", classifyPathRisk(path))),
+    ...deletes.map((path) => maxRisk("medium", classifyPathRisk(path))),
     ...commands.map((commandClass) => COMMAND_RISK[commandClass] ?? "critical"),
   );
 }
@@ -66,18 +68,24 @@ export function validateTaskScope(scope) {
   for (const field of ["reads", "writes", "commands", "verification"]) {
     if (!Array.isArray(scope[field])) errors.push(`${field} must be a list`);
   }
-  for (const field of ["reads", "writes"]) {
+  for (const field of ["writeTrees", "deletes"]) {
+    if (scope[field] !== undefined && !Array.isArray(scope[field])) errors.push(`${field} must be a list when present`);
+  }
+  for (const field of ["reads", "writes", "writeTrees", "deletes"]) {
     for (const path of Array.isArray(scope[field]) ? scope[field] : []) {
       const reason = validateRepoPath(path);
       if (reason) errors.push(`invalid ${field} path '${String(path)}': ${reason}`);
       else if (isForbiddenRepoPath(path)) errors.push(`forbidden ${field} path: ${path}`);
       else if (field === "writes" && path.endsWith("/")) errors.push(`write scope must name exact files, not a directory: ${path}`);
+      else if (field === "writeTrees" && !path.endsWith("/")) errors.push(`writeTrees entries must be directory prefixes ending in '/': ${path}`);
     }
   }
   for (const commandClass of Array.isArray(scope.commands) ? scope.commands : []) {
     if (!COMMAND_CLASSES.has(commandClass)) errors.push(`unknown command class: ${commandClass}`);
   }
-  if (!Array.isArray(scope.writes) || scope.writes.length === 0) errors.push("writes must name at least one exact output");
+  if ((!Array.isArray(scope.writes) || scope.writes.length === 0)
+    && (!Array.isArray(scope.writeTrees) || scope.writeTrees.length === 0))
+    errors.push("writes or writeTrees must authorize at least one output");
   if (!Array.isArray(scope.verification) || scope.verification.length === 0)
     errors.push("verification must contain at least one completion check");
 
@@ -96,7 +104,9 @@ export function scopeNeedsApproval(scope) {
 }
 
 export function isPathInScope(path, entries = []) {
-  return entries.some((entry) => entry.endsWith("/") ? path.startsWith(entry) : path === entry);
+  return entries.some((entry) => entry.endsWith("/")
+    ? path === entry.slice(0, -1) || path.startsWith(entry)
+    : path === entry);
 }
 
 export function classifyCommand(command) {
@@ -105,6 +115,7 @@ export function classifyCommand(command) {
   if (/^(npm|pnpm|yarn|bun)\s+(test|run\s+(test[^ ]*|lint|typecheck|check))(\s|$)/.test(value)) return "quality";
   if (/^node\s+(--test\b|scripts\/(task-check|dor-check|contract-guard|okf-conformance)\.mjs\b)/.test(value)) return "quality";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+build(\s|$)/.test(value)) return "build";
+  if (/^(cp|mv|rsync|mkdir|copy|move|xcopy|robocopy)(\s|$)/i.test(value)) return "filesystem";
   if (/^(npm|pnpm|yarn|bun)\s+(install|add|remove|update)(\s|$)/.test(value)) return "dependency";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+db:(generate|push|migrate)(\s|$)/.test(value)) return "database";
   if (/^(curl|wget|gh\s+api)(\s|$)/.test(value)) return "network";

@@ -29,6 +29,8 @@ export function validateWorkItem(taskPath, { root = process.cwd() } = {}) {
     risk: fm.risk,
     reads: fm.reads,
     writes: fm.writes,
+    writeTrees: fm.write_trees,
+    deletes: fm.deletes,
     commands: fm.commands,
     verification: fm.verification,
   }));

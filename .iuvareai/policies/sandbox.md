@@ -15,10 +15,13 @@ applies_to: [direct, standard, controlled]
 
 Personas are expertise lenses and confer no permissions. Every mutation is
 controlled by a short-lived task grant containing goal, lane, risk, read scope,
-exact write files, command classes, verification, approval, and expiry.
+exact write files, optional file-operation destination trees and move deletions,
+command classes, verification, approval, and expiry.
 
 - No grant: safe repository discovery reads and inspection commands only.
-- Active grant: reads and writes must fit the scope; writes are exact files.
+- Active grant: reads and writes must fit the scope; built-in writes are exact files.
+- Copy/move/mkdir: use `iuvare_file_operation`; destination trees and move
+  deletions receive a human preview. Raw shell transfer commands are blocked.
 - Expansion: replace the grant explicitly; never silently widen it.
 - Expiry: 60 minutes by default.
 
@@ -31,7 +34,8 @@ exact write files, command classes, verification, approval, and expiry.
 
 ## Classification
 
-Normal project docs/source/tests are low. Manifests and dependencies are medium.
+Normal project docs/source/tests are low. Scoped directory transfers, manifests,
+and dependencies are medium.
 CI, framework policy, infrastructure, and migrations are high. Production,
 destructive mutation, and privilege change are critical. Root location alone
 does not imply danger.

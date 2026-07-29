@@ -51,8 +51,26 @@ test("direct lane rejects high-risk output", () => {
   assert.match(errors.join("\n"), /direct lane/);
 });
 
+test("scoped file trees support copy and move without broad built-in writes", () => {
+  const scope = {
+    ...docsScope,
+    risk: "medium",
+    writes: [],
+    writeTrees: ["docs/archive/"],
+    deletes: ["docs/source/"],
+    reads: ["docs/source/"],
+    commands: ["filesystem"],
+  };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(scopeNeedsApproval(scope), true);
+  assert.equal(isPathInScope("docs/archive/copied/file.md", scope.writeTrees), true);
+  assert.equal(isPathInScope("docs/source", scope.deletes), true);
+});
+
 test("commands map to task classes", () => {
   assert.equal(classifyCommand("git diff --stat"), "inspect");
+  assert.equal(classifyCommand("cp -r docs/a docs/b"), "filesystem");
+  assert.equal(classifyCommand("mv docs/a docs/b"), "filesystem");
   assert.equal(classifyCommand("npm test"), "quality");
   assert.equal(classifyCommand("npm install zod"), "dependency");
   assert.equal(classifyCommand("npm run db:migrate"), "database");

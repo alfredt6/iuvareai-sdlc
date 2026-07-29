@@ -37,7 +37,8 @@ intent → exact task scope → implement → verify → review/release by risk
 Use `/iuvare-status` to inspect the current 60-minute grant,
 `/iuvare-vision` to check image support, and `/iuvare-clear` to revoke it.
 Design screenshots can be listed in task `reads` and inspected through Pi's
-built-in `read` tool before UI implementation.
+built-in `read` tool before UI implementation. Copy/move/mkdir operations use
+the scoped `iuvare_file_operation` tool rather than raw shell commands.
 
 ## Delivery lanes
 
@@ -83,7 +84,8 @@ environment approval, and rollback automation.
 
 See the [canonical specification](.iuvareai/IUVARE_AI_SDLC_v4.md),
 [workflow guide](.iuvareai/docs/complete-workflow.md),
-[design-image guide](.iuvareai/docs/design-reference-images.md), and
+[design-image guide](.iuvareai/docs/design-reference-images.md),
+[file-operation guide](.iuvareai/docs/file-operations.md), and
 [installation guide](.iuvareai/docs/install.md).
 
 MIT licensed.

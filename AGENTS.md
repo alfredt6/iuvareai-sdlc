@@ -17,6 +17,10 @@ This project follows **Iuvare AI SDLC v4 Lean**. Read
 - Design images are first-class task inputs. Add their exact files or containing
   directory to the task `reads`, inspect them with the built-in `read` tool before
   UI implementation, and use a model that advertises image input.
+- For copying, moving, or creating directories, request the `filesystem` command
+  class and use `iuvare_file_operation`. Use exact `writes` for file targets,
+  `write_trees` for destination directory trees, and `deletes` for move sources.
+  Do not use raw `cp`, `mv`, `rsync`, or `mkdir`.
 
 ## Repository boundaries
 

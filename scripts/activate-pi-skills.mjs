@@ -42,6 +42,8 @@ and verification. Low-risk work auto-authorizes; sensitive scope asks once.
 Personas are optional expertise lenses and never grant permissions.
 For visual work, include design image files/directories in task reads, run
 \`/iuvare-vision\`, and inspect supported images with \`read\` before coding.
+For copy/move/mkdir, request the filesystem class with scoped destinations and
+use \`iuvare_file_operation\`, never raw shell transfer commands.
 `);
 mkdirSync(join(".pi", "extensions"), { recursive: true });
 copyFileSync(EXTENSION_SRC, EXTENSION_OUT);

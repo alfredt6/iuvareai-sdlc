@@ -35,7 +35,9 @@ The operator does **not** select a persona. On a mutating request, the agent cal
 shows one approval preview. Use `/iuvare-status` for scope inspection,
 `/iuvare-vision` to verify the model can inspect images, and `/iuvare-clear` for
 revocation. Design screenshots belong in task `reads` and are opened with Pi's
-built-in `read` tool.
+built-in `read` tool. File and directory transfers request `filesystem` plus
+`write_trees`/`deletes` as needed and use `iuvare_file_operation`; no raw copy or
+move command is required.
 
 ## Project setup
 
