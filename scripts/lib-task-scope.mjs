@@ -3,7 +3,7 @@ import { isSensitivePath, validateRepoPath } from "./lib-permissions.mjs";
 export const LANES = new Set(["direct", "standard", "controlled"]);
 export const RISKS = ["low", "medium", "high", "critical"];
 export const COMMAND_CLASSES = new Set([
-  "inspect", "quality", "build", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
+  "inspect", "quality", "build", "container", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
 ]);
 
 const RISK_INDEX = new Map(RISKS.map((risk, index) => [risk, index]));
@@ -18,7 +18,7 @@ const MEDIUM_PATHS = [
   /^\.iuvareai\/(specs|tasks|stories|deltas)\//,
 ];
 const COMMAND_RISK = {
-  inspect: "low", quality: "low", build: "low", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
+  inspect: "low", quality: "low", build: "low", container: "critical", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
 const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
@@ -121,6 +121,13 @@ export function classifyCommand(command) {
   if (/^(npm|pnpm|yarn|bun)\s+(test|run\s+(test[^ ]*|lint|typecheck|check))(\s|$)/.test(value)) return "quality";
   if (/^node\s+(--test\b|scripts\/(task-check|dor-check|contract-guard|okf-conformance)\.mjs\b)/.test(value)) return "quality";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+build(\s|$)/.test(value)) return "build";
+  const isDockerBuild = /^docker\s+(?:build|image\s+build|buildx\s+build)(\s|$)/i.test(value)
+    || /^docker(?:-compose|\s+compose)\s+build(\s|$)/i.test(value);
+  if (isDockerBuild) {
+    if (/(^|\s)--push(?:=true)?(\s|$)/i.test(value)
+      || /(^|\s)(?:--output|-o|--cache-to)(?:=|\s+)[^\s]*(?:type=registry|push=true)(?:,|\s|$)/i.test(value)) return "release";
+    return "container";
+  }
   if (/^(cp|mv|rsync|mkdir|copy|move|xcopy|robocopy)(\s|$)/i.test(value)) return "filesystem";
   if (/^(magick|convert|mogrify)(\s|$)/i.test(value)) return "image";
   if (/^(npm|pnpm|yarn|bun)\s+(install|add|remove|update)(\s|$)/.test(value)) return "dependency";

@@ -24,6 +24,10 @@ command classes, verification, approval, and expiry.
   exact write target, and the low-risk `image` command class.
 - Copy/move/mkdir: use `iuvare_file_operation`; destination trees and move
   deletions receive a human preview. Raw shell transfer commands are blocked.
+- Local Docker application image builds: request the `container` command class
+  in a Controlled/critical grant. The exact build command receives a second
+  confirmation. Push/export-to-registry is a release action, and unrelated
+  Docker commands remain blocked.
 - Expansion: replace the grant explicitly; never silently widen it.
 - Expiry: 60 minutes by default.
 
@@ -31,7 +35,8 @@ command classes, verification, approval, and expiry.
 
 - Low risk is auto-authorized from the explicit user task.
 - Medium/high scope receives a human preview of goal, writes, commands, and risk.
-- Critical commands receive exact-command approval at execution time.
+- Critical container-build, release, and destructive commands receive
+  exact-command approval at execution time.
 - Non-interactive execution fails closed when approval is required.
 
 ## Classification

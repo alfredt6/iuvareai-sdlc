@@ -37,7 +37,7 @@ export default function (pi: ExtensionAPI) {
       ? "The current model supports image input."
       : "WARNING: the current model does not advertise image input; switch to a vision-capable model before implementing from visual references.";
     return {
-      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- To crop, resize, rotate, flip, convert, or adjust an image, request the image command class with the source in reads and exact target in writes, then use iuvare_image_operation and inspect the result with read.\n- For copy, move, or directory creation, request the filesystem command class plus exact writes or approved write_trees/deletes, then use iuvare_file_operation. Do not use raw cp/mv/rsync/mkdir.\n- Every expertise lens may run Git commands: read-only Git is inspection; request git for local mutations, network for remote operations, or destructive for destructive operations.\n- ${vision}`,
+      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- To crop, resize, rotate, flip, convert, or adjust an image, request the image command class with the source in reads and exact target in writes, then use iuvare_image_operation and inspect the result with read.\n- For copy, move, or directory creation, request the filesystem command class plus exact writes or approved write_trees/deletes, then use iuvare_file_operation. Do not use raw cp/mv/rsync/mkdir.\n- Every expertise lens may run Git commands: read-only Git is inspection; request git for local mutations, network for remote operations, or destructive for destructive operations.\n- Local Docker application image builds require a Controlled/critical scope with the container command class and receive exact-command confirmation; other Docker operations remain blocked.\n- ${vision}`,
     };
   });
 
@@ -55,7 +55,7 @@ export default function (pi: ExtensionAPI) {
       writes: Type.Array(Type.String(), { description: "Exact output files for write/edit and file operations" }),
       write_trees: Type.Array(Type.String(), { description: "Directory prefixes ending in /, usable only by iuvare_file_operation; always human-previewed" }),
       deletes: Type.Array(Type.String(), { description: "Exact source files/directories authorized to be removed by a move" }),
-      commands: Type.Array(StringEnum(["inspect", "quality", "build", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive"] as const)),
+      commands: Type.Array(StringEnum(["inspect", "quality", "build", "container", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive"] as const)),
       verification: Type.Array(Type.String()),
     }),
     async execute(_id, params, _signal, _update, ctx) {
@@ -292,7 +292,7 @@ export default function (pi: ExtensionAPI) {
       if (!grant) return block("no active task scope; call iuvare_request_scope first");
       if (!commandClass) return block("command is not classifiable by policy; use a supported command or update the policy");
       if (!grant.commands.includes(commandClass)) return block(`command class '${commandClass}' is outside the active task scope`);
-      if (commandClass === "release" || commandClass === "destructive") {
+      if (commandClass === "container" || commandClass === "release" || commandClass === "destructive") {
         if (!ctx.hasUI || !(await ctx.ui.confirm("Critical action", `Execute this exact command?\n\n${command}`)))
           return block("critical command was not approved");
       }

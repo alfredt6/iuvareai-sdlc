@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -91,7 +91,32 @@ test("commands map to task classes", () => {
   assert.equal(classifyCommand("npm test"), "quality");
   assert.equal(classifyCommand("npm install zod"), "dependency");
   assert.equal(classifyCommand("npm run db:migrate"), "database");
+  assert.equal(classifyCommand("docker build -t app:test ."), "container");
+  assert.equal(classifyCommand("docker image build ."), "container");
+  assert.equal(classifyCommand("docker buildx build --load ."), "container");
+  assert.equal(classifyCommand("docker compose build app"), "container");
+  assert.equal(classifyCommand("docker-compose build app"), "container");
+  assert.equal(classifyCommand("docker buildx build --push ."), "release");
+  assert.equal(classifyCommand("docker buildx build --push=true ."), "release");
+  assert.equal(classifyCommand("docker buildx build --output=type=registry ."), "release");
+  assert.equal(classifyCommand("docker buildx build --cache-to type=registry,ref=cache ."), "release");
+  assert.equal(classifyCommand("docker run app:test"), null);
+  assert.equal(classifyCommand("docker compose up"), null);
   assert.equal(classifyCommand("kubectl deploy app"), "release");
+});
+
+test("local Docker image builds require critical Controlled authorization", () => {
+  const scope = { ...docsScope, lane: "controlled", risk: "critical", commands: ["container"] };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(requiredScopeRisk(scope), "critical");
+  assert.equal(scopeNeedsApproval(scope), true);
+  assert.match(validateTaskScope({ ...scope, lane: "direct" }).join("\n"), /use controlled/);
+});
+
+test("the Pi gate requires exact-action confirmation for container builds", () => {
+  const gate = readFileSync(new URL("../integrations/pi/iuvareai-sandbox.ts", import.meta.url), "utf8");
+  assert.match(gate, /commandClass === "container" \|\| commandClass === "release"/);
+  assert.match(gate, /ctx\.ui\.confirm\("Critical action"/);
 });
 
 test("git mutation scope is available to every lens through the shared capability model", () => {

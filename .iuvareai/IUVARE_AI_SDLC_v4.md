@@ -94,6 +94,9 @@ Rules:
 - Critical actions receive parameter-bound approval again at execution time.
 - Copy, move, and directory creation use `iuvare_file_operation` with the
   `filesystem` command class; raw `cp`/`mv`/`rsync`/`mkdir` stay blocked.
+- Local Docker application image builds use the `container` command class and
+  require Controlled/critical scope plus exact-command confirmation. Registry
+  pushes remain release actions; non-build Docker operations stay blocked.
 - Non-interactive runs fail closed when human approval is required.
 
 ## 5. Risk classification
@@ -103,7 +106,7 @@ Rules:
 | **Low** | `docs/`, `src/`, `tests/`, safe README changes, image transforms, inspection, tests | Automatic task grant |
 | **Medium** | Dependencies, manifests, lockfiles, build config, network calls | Scope preview + human confirmation |
 | **High** | CI, agent/framework policy, infrastructure, migrations, database mutation | Controlled lane + human confirmation + independent review |
-| **Critical** | Production deployment, destructive data/files, privilege changes | Exact-action approval, expiry/replay protection, audit |
+| **Critical** | Production deployment, destructive data/files, privilege changes, local Docker application image builds | Exact-action approval, expiry/replay protection, audit |
 
 Secrets, private keys, credentials, and real PII are forbidden to agent context
 in every lane. Risk is based on impact, not merely on whether a file is at the

@@ -40,7 +40,10 @@ Design screenshots can be listed in task `reads` and inspected through Pi's
 built-in `read` tool before UI implementation. Agents can crop, resize, rotate,
 convert, and visually adjust authorized images with `iuvare_image_operation`.
 Copy/move/mkdir operations use the scoped `iuvare_file_operation` tool rather
-than raw shell commands.
+than raw shell commands. Local Docker application image builds use a
+Controlled/critical `container` command capability and receive a second,
+exact-command confirmation; other Docker operations remain blocked unless
+separately classified by policy.
 
 ## Delivery lanes
 
