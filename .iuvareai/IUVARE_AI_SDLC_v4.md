@@ -85,6 +85,9 @@ Rules:
   `iuvare_image_operation` with the source in `reads`, exact target in `writes`,
   and the `image` command class.
 - A replacement scope is requested when work legitimately grows.
+- Repository-local Git capability is shared by every optional expertise lens:
+  read-only operations are `inspect`, local mutations are `git`, remote operations
+  are `network`, and destructive operations are `destructive`.
 - Grants expire after 60 minutes by default and are retained in the session log.
 - Low-risk normal work is auto-authorized from the explicit user task.
 - Medium/high scope receives one human preview and confirmation.
@@ -149,9 +152,10 @@ verification are green, review requirements are met, and evidence is retained.
 
 ## 8. Expertise and execution
 
-The default agent may create documentation, source, tests, and safe project
-configuration when exact files are authorized. Specialist skills are loaded
-only when useful:
+The default agent may create documentation, source, tests, safe project
+configuration, and risk-classified Git operations when authorized. The active
+task capability—not the selected persona—governs Git execution. Specialist skills
+are loaded only when useful:
 
 - Analyst/PM for product discovery and measurable requirements.
 - Architect/UX for system or experience decisions.

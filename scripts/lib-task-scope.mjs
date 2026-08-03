@@ -3,7 +3,7 @@ import { isSensitivePath, validateRepoPath } from "./lib-permissions.mjs";
 export const LANES = new Set(["direct", "standard", "controlled"]);
 export const RISKS = ["low", "medium", "high", "critical"];
 export const COMMAND_CLASSES = new Set([
-  "inspect", "quality", "build", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
+  "inspect", "quality", "build", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
 ]);
 
 const RISK_INDEX = new Map(RISKS.map((risk, index) => [risk, index]));
@@ -18,7 +18,7 @@ const MEDIUM_PATHS = [
   /^\.iuvareai\/(specs|tasks|stories|deltas)\//,
 ];
 const COMMAND_RISK = {
-  inspect: "low", quality: "low", build: "low", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
+  inspect: "low", quality: "low", build: "low", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
 const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
@@ -111,7 +111,13 @@ export function isPathInScope(path, entries = []) {
 
 export function classifyCommand(command) {
   const value = command.trim();
-  if (/^(pwd|ls|find|rg|grep|git\s+(status|diff|show|log|branch))(\s|$)/.test(value)) return "inspect";
+  if (/^(pwd|ls|find|rg|grep)(\s|$)/.test(value)) return "inspect";
+  if (/^git\s+(status|diff|show|log)(\s|$)/.test(value)) return "inspect";
+  if (/^git\s+branch(?:\s+(?:--show-current|--list)(?:\s.*)?)?$/.test(value)) return "inspect";
+  if (/^git\s+(?:reset\s+--hard(?:\s|$)|clean\b.*\s-[a-z]*f[a-z]*(?:\s|$)|push\b.*\s(?:-f|--force(?:-with-lease)?|--delete|\+[^ ]+)(?:\s|$)|branch\s+-D(?:\s|$))/i.test(value)) return "destructive";
+  if (/^git(?:\s+(?:-C|--git-dir|--work-tree)(?:\s|=)|\s+config\b.*\s--(?:global|system)(?:\s|$))/i.test(value)) return null;
+  if (/^git\s+(clone|fetch|pull|push|ls-remote)(\s|$)/.test(value)) return "network";
+  if (/^git(\s|$)/.test(value)) return "git";
   if (/^(npm|pnpm|yarn|bun)\s+(test|run\s+(test[^ ]*|lint|typecheck|check))(\s|$)/.test(value)) return "quality";
   if (/^node\s+(--test\b|scripts\/(task-check|dor-check|contract-guard|okf-conformance)\.mjs\b)/.test(value)) return "quality";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+build(\s|$)/.test(value)) return "build";

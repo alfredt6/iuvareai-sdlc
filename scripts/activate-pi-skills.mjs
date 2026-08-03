@@ -46,7 +46,10 @@ For visual work, include design image files/directories in task reads, run
 For crop/resize/rotate/convert/adjust operations, request the image class and use
 \`iuvare_image_operation\`, then inspect the output with \`read\`.
 For copy/move/mkdir, request the filesystem class with scoped destinations and
-use \`iuvare_file_operation\`, never raw shell transfer commands.
+use \`iuvare_file_operation\`, never raw shell transfer commands. Every expertise
+lens may execute repository-local Git commands: read-only operations are
+inspection; request \`git\` for local mutations, \`network\` for remote operations,
+or \`destructive\` for destructive operations.
 `);
 mkdirSync(join(".pi", "extensions"), { recursive: true });
 copyFileSync(EXTENSION_SRC, EXTENSION_OUT);

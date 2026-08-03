@@ -75,6 +75,16 @@ test("scoped file trees support copy and move without broad built-in writes", ()
 
 test("commands map to task classes", () => {
   assert.equal(classifyCommand("git diff --stat"), "inspect");
+  assert.equal(classifyCommand("git branch"), "inspect");
+  assert.equal(classifyCommand("git add src/app.ts"), "git");
+  assert.equal(classifyCommand("git commit -m update"), "git");
+  assert.equal(classifyCommand("git fetch origin"), "network");
+  assert.equal(classifyCommand("git push --force origin main"), "destructive");
+  assert.equal(classifyCommand("git reset --hard HEAD"), "destructive");
+  assert.equal(classifyCommand("git clean -fd"), "destructive");
+  assert.equal(classifyCommand("git branch -D obsolete"), "destructive");
+  assert.equal(classifyCommand("git config --global user.name agent"), null);
+  assert.equal(classifyCommand("git -C ../outside status"), null);
   assert.equal(classifyCommand("cp -r docs/a docs/b"), "filesystem");
   assert.equal(classifyCommand("mv docs/a docs/b"), "filesystem");
   assert.equal(classifyCommand("magick source.png target.webp"), "image");
@@ -82,6 +92,13 @@ test("commands map to task classes", () => {
   assert.equal(classifyCommand("npm install zod"), "dependency");
   assert.equal(classifyCommand("npm run db:migrate"), "database");
   assert.equal(classifyCommand("kubectl deploy app"), "release");
+});
+
+test("git mutation scope is available to every lens through the shared capability model", () => {
+  const scope = { ...docsScope, risk: "medium", commands: ["git"] };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(requiredScopeRisk(scope), "medium");
+  assert.equal(scopeNeedsApproval(scope), true);
 });
 
 test("repository paths reject traversal and secrets", () => {
