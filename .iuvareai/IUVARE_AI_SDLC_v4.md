@@ -105,9 +105,15 @@ Rules:
 - Critical actions receive parameter-bound approval again at execution time.
 - Copy, move, and directory creation use `iuvare_file_operation` with the
   `filesystem` command class; raw `cp`/`mv`/`rsync`/`mkdir` stay blocked.
-- Local Docker application image builds use the `container` command class and
-  require Controlled/critical scope plus exact-command confirmation. Registry
-  pushes remain release actions; non-build Docker operations stay blocked.
+- Common local Docker/Compose lifecycle and log commands use the medium-risk
+  `container-runtime` class. One task-scope approval authorizes them for the
+  grant duration; they do not receive per-command confirmation. Status/list
+  commands are inspection.
+- Image builds plus arbitrary `run`, `exec`, `create`, and `commit` commands use
+  Controlled/critical `container` scope and exact-command confirmation. Registry
+  push/publish is `release`; volume deletion, `rm`/`rmi`, and prune operations are
+  `destructive`. Authentication, secret-revealing config/inspect, file transfer,
+  remote contexts, and unknown Docker commands stay blocked.
 - Cloud server setup uses `iuvare_cloud_operation` with the `cloud` command
   class. It requires Controlled/critical scope, an allowlisted provider CLI,
   shell-free argument execution, and exact-action confirmation. Raw cloud CLI
@@ -119,9 +125,9 @@ Rules:
 | Risk | Examples | Approval |
 |---|---|---|
 | **Low** | `docs/`, `src/`, `tests/`, safe README changes, image transforms, inspection, tests | Automatic task grant |
-| **Medium** | External source reads, dependencies, manifests, lockfiles, build config, network calls | Scope preview + human confirmation |
+| **Medium** | Local container lifecycle/logs, external source reads, dependencies, manifests, lockfiles, build config, network calls | Scope preview + human confirmation |
 | **High** | CI, agent/framework policy, infrastructure, migrations, database mutation | Controlled lane + human confirmation + independent review |
-| **Critical** | Cloud server mutation, production deployment, destructive data/files, privilege changes, local Docker application image builds | Exact-action approval, expiry/replay protection, audit |
+| **Critical** | Cloud server mutation, production deployment, destructive data/files, privilege changes, container build/arbitrary execution | Exact-action approval, expiry/replay protection, audit |
 
 Secrets, private keys, credentials, external VCS metadata, and real PII are
 forbidden to agent context in every lane. Cloud credentials are injected by a

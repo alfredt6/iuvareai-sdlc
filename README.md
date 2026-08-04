@@ -45,10 +45,12 @@ repository by adding an absolute file or trailing-`/` directory prefix to task
 `reads` (for example, `C:/Brainbots/shared-src/`). External reads are
 human-previewed and read-only; writes and moves remain inside the active
 repository, while secrets and external VCS metadata remain blocked. Local
-Docker application image builds use a
-Controlled/critical `container` command capability and receive a second,
-exact-command confirmation; other Docker operations remain blocked unless
-separately classified by policy. Cloud server setup uses the shell-free
+Docker/Compose status commands are inspection, while common local lifecycle and
+log commands use one medium-risk `container-runtime` grant without repeated
+confirmation. Builds, `run`/`exec`/`create`/`commit`, registry push, volume
+removal, `rm`/`rmi`, and prune retain critical exact-action controls. Docker
+authentication, secret-revealing config/inspect, file transfer, remote contexts,
+and unknown commands remain blocked. Cloud server setup uses the shell-free
 `iuvare_cloud_operation` tool with a Controlled/critical `cloud` grant and
 confirmation of every exact provider action. DigitalOcean, Zeabur, AWS, Azure,
 GCP, Terraform, Pulumi, Fly.io, Railway, and Vercel CLIs are allowlisted.

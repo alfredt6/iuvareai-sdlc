@@ -5,7 +5,7 @@ import {
 export const LANES = new Set(["direct", "standard", "controlled"]);
 export const RISKS = ["low", "medium", "high", "critical"];
 export const COMMAND_CLASSES = new Set([
-  "inspect", "quality", "build", "container", "cloud", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
+  "inspect", "quality", "build", "container", "container-runtime", "cloud", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
 ]);
 
 const RISK_INDEX = new Map(RISKS.map((risk, index) => [risk, index]));
@@ -20,7 +20,7 @@ const MEDIUM_PATHS = [
   /^\.iuvareai\/(specs|tasks|stories|deltas)\//,
 ];
 const COMMAND_RISK = {
-  inspect: "low", quality: "low", build: "low", container: "critical", cloud: "critical", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
+  inspect: "low", quality: "low", build: "low", container: "critical", "container-runtime": "medium", cloud: "critical", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
 const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
@@ -133,11 +133,12 @@ export function validateTaskScope(scope) {
     if (!COMMAND_CLASSES.has(commandClass)) errors.push(`unknown command class: ${commandClass}`);
   }
   const hasExternalReads = Array.isArray(scope.reads) && scope.reads.some(isExternalReadPath);
-  const hasCloudActivity = Array.isArray(scope.commands) && scope.commands.includes("cloud");
+  const hasOperationalActivity = Array.isArray(scope.commands)
+    && scope.commands.some((command) => ["cloud", "container", "container-runtime"].includes(command));
   if ((!Array.isArray(scope.writes) || scope.writes.length === 0)
     && (!Array.isArray(scope.writeTrees) || scope.writeTrees.length === 0)
-    && !hasExternalReads && !hasCloudActivity)
-    errors.push("writes, writeTrees, an external read, or cloud activity must authorize the task");
+    && !hasExternalReads && !hasOperationalActivity)
+    errors.push("writes, writeTrees, an external read, or container/cloud activity must authorize the task");
   if (!Array.isArray(scope.verification) || scope.verification.length === 0)
     errors.push("verification must contain at least one completion check");
 
@@ -179,13 +180,7 @@ export function classifyCommand(command) {
   if (/^node\s+(--test\b|scripts\/(task-check|dor-check|contract-guard|okf-conformance)\.mjs\b)/.test(value)) return "quality";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+build(\s|$)/.test(value)) return "build";
   if (/^(doctl|zeabur|aws|az|gcloud|terraform|pulumi|flyctl|railway|vercel)(\s|$)/i.test(value)) return "cloud";
-  const isDockerBuild = /^docker\s+(?:build|image\s+build|buildx\s+build)(\s|$)/i.test(value)
-    || /^docker(?:-compose|\s+compose)\s+build(\s|$)/i.test(value);
-  if (isDockerBuild) {
-    if (/(^|\s)--push(?:=true)?(\s|$)/i.test(value)
-      || /(^|\s)(?:--output|-o|--cache-to)(?:=|\s+)[^\s]*(?:type=registry|push=true)(?:,|\s|$)/i.test(value)) return "release";
-    return "container";
-  }
+  if (/^docker(?:\s|$)|^docker-compose(?:\s|$)/i.test(value)) return classifyDockerCommand(value);
   if (/^(cp|mv|rsync|mkdir|copy|move|xcopy|robocopy)(\s|$)/i.test(value)) return "filesystem";
   if (/^(magick|convert|mogrify)(\s|$)/i.test(value)) return "image";
   if (/^(npm|pnpm|yarn|bun)\s+(install|add|remove|update)(\s|$)/.test(value)) return "dependency";
@@ -194,4 +189,109 @@ export function classifyCommand(command) {
   if (/\b(deploy|release|kubectl|terraform\s+apply)\b/.test(value)) return "release";
   if (/\b(rm|rmdir|del|drop|truncate|reset\s+--hard|force)\b/i.test(value)) return "destructive";
   return null;
+}
+
+function classifyDockerCommand(value) {
+  const tokens = tokenizeCommand(value);
+  if (tokens.length === 0) return null;
+  let compose = false;
+  let args;
+  if (tokens[0].toLowerCase() === "docker-compose") {
+    compose = true;
+    args = tokens.slice(1);
+  } else if (tokens[0].toLowerCase() === "docker" && tokens[1]?.toLowerCase() === "compose") {
+    compose = true;
+    args = tokens.slice(2);
+  } else if (tokens[0].toLowerCase() === "docker") {
+    args = tokens.slice(1);
+  } else return null;
+
+  if (compose) {
+    const parsed = composeCommand(args);
+    if (!parsed) return null;
+    const { action, rest } = parsed;
+    if (["ps", "ls", "images", "version", "port"].includes(action)) return "inspect";
+    if (action === "top") return "container-runtime";
+    if (["push", "publish"].includes(action)) return "release";
+    if (action === "build") return dockerBuildClass(rest);
+    if (["run", "exec"].includes(action)) return "container";
+    if (action === "rm") return "destructive";
+    if (action === "down")
+      return hasAnyFlag(rest, ["-v", "--volumes", "--rmi"]) ? "destructive" : "container-runtime";
+    if (action === "up") {
+      if (hasAnyFlag(rest, ["-V", "--renew-anon-volumes"])) return "destructive";
+      if (hasAnyFlag(rest, ["--build"])) return "container";
+      return "container-runtime";
+    }
+    if ([
+      "create", "start", "stop", "restart", "pause", "unpause", "kill", "logs",
+      "pull", "wait", "events", "attach",
+    ].includes(action)) return "container-runtime";
+    return null;
+  }
+
+  const action = args[0]?.toLowerCase();
+  const subaction = args[1]?.toLowerCase();
+  if (!action) return null;
+  if (["ps", "images", "version", "info"].includes(action)) return "inspect";
+  if (["diff", "port"].includes(action)) return "inspect";
+  if (action === "top") return "container-runtime";
+  if (["start", "stop", "restart", "pause", "unpause", "kill", "logs", "pull", "wait", "stats", "update", "rename", "tag"].includes(action))
+    return "container-runtime";
+  if (["run", "exec", "create", "commit"].includes(action)) return "container";
+  if (action === "build") return dockerBuildClass(args.slice(1));
+  if (action === "push") return "release";
+  if (["rm", "rmi", "prune"].includes(action)) return "destructive";
+
+  if (action === "buildx") {
+    if (subaction === "build") return dockerBuildClass(args.slice(2));
+    if (subaction === "prune") return "destructive";
+    return null;
+  }
+  if (action === "builder") return subaction === "prune" ? "destructive" : null;
+  if (["container", "image", "network", "volume", "system"].includes(action)) {
+    if (subaction === "ls" || (action === "system" && subaction === "df")) return "inspect";
+    if (["rm", "prune"].includes(subaction)) return "destructive";
+    if (action === "image" && subaction === "build") return dockerBuildClass(args.slice(2));
+    if (action === "image" && subaction === "push") return "release";
+    if (action === "image" && ["pull", "tag"].includes(subaction)) return "container-runtime";
+    if (action === "container" && ["run", "exec", "create", "commit"].includes(subaction)) return "container";
+    if (action === "container" && ["start", "stop", "restart", "pause", "unpause", "kill", "logs", "wait", "top", "stats", "update", "rename"].includes(subaction))
+      return "container-runtime";
+    if (["network", "volume"].includes(action) && subaction === "create") return "container";
+  }
+  return null;
+}
+
+function composeCommand(args) {
+  const valueFlags = new Set(["-f", "--file", "--profile", "-p", "--project-name", "--project-directory", "--env-file", "--parallel", "--progress", "--ansi"]);
+  const standaloneFlags = new Set(["--all-resources", "--compatibility", "--dry-run"]);
+  let index = 0;
+  while (index < args.length && args[index].startsWith("-")) {
+    const flag = args[index];
+    if (flag.includes("=") || standaloneFlags.has(flag)) index += 1;
+    else if (valueFlags.has(flag) && args[index + 1] !== undefined) index += 2;
+    else return null;
+  }
+  if (index >= args.length) return null;
+  return { action: args[index].toLowerCase(), rest: args.slice(index + 1) };
+}
+
+function dockerBuildClass(args) {
+  const value = args.join(" ");
+  if (hasAnyFlag(args, ["--push", "--push=true"])
+    || /(?:^|\s)(?:--output|-o|--cache-to)(?:=|\s+)[^\s]*(?:type=registry|push=true)(?:,|\s|$)/i.test(value))
+    return "release";
+  return "container";
+}
+
+function hasAnyFlag(args, flags) {
+  return args.some((arg) => flags.includes(arg) || flags.some((flag) => flag.startsWith("--") && arg.startsWith(`${flag}=`)));
+}
+
+function tokenizeCommand(value) {
+  return (value.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((token) => {
+    const quoted = (token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"));
+    return quoted ? token.slice(1, -1) : token;
+  });
 }

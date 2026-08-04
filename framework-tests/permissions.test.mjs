@@ -141,12 +141,42 @@ test("commands map to task classes", () => {
   assert.equal(classifyCommand("docker buildx build --load ."), "container");
   assert.equal(classifyCommand("docker compose build app"), "container");
   assert.equal(classifyCommand("docker-compose build app"), "container");
+  assert.equal(classifyCommand("docker compose up -d --no-deps --force-recreate worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose logs worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose ps"), "inspect");
+  assert.equal(classifyCommand("docker compose up -d worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose up --detach worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose restart worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose -f compose.dev.yml --profile workers up -d worker"), "container-runtime");
+  assert.equal(classifyCommand("docker-compose stop worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose down"), "container-runtime");
+  assert.equal(classifyCommand("docker logs worker"), "container-runtime");
+  assert.equal(classifyCommand("docker top worker"), "container-runtime");
+  assert.equal(classifyCommand("docker compose top worker"), "container-runtime");
+  assert.equal(classifyCommand("docker ps"), "inspect");
   assert.equal(classifyCommand("docker buildx build --push ."), "release");
   assert.equal(classifyCommand("docker buildx build --push=true ."), "release");
   assert.equal(classifyCommand("docker buildx build --output=type=registry ."), "release");
   assert.equal(classifyCommand("docker buildx build --cache-to type=registry,ref=cache ."), "release");
-  assert.equal(classifyCommand("docker run app:test"), null);
-  assert.equal(classifyCommand("docker compose up"), null);
+  assert.equal(classifyCommand("docker run app:test"), "container");
+  assert.equal(classifyCommand("docker exec worker npm test"), "container");
+  assert.equal(classifyCommand("docker compose exec worker npm test"), "container");
+  assert.equal(classifyCommand("docker compose run --rm worker npm test"), "container");
+  assert.equal(classifyCommand("docker compose up --build worker"), "container");
+  assert.equal(classifyCommand("docker commit worker local:debug"), "container");
+  assert.equal(classifyCommand("docker volume create cache"), "container");
+  assert.equal(classifyCommand("docker network create app-net"), "container");
+  assert.equal(classifyCommand("docker push app:latest"), "release");
+  assert.equal(classifyCommand("docker compose push worker"), "release");
+  assert.equal(classifyCommand("docker compose down --volumes"), "destructive");
+  assert.equal(classifyCommand("docker compose up -V worker"), "destructive");
+  assert.equal(classifyCommand("docker compose rm -f worker"), "destructive");
+  assert.equal(classifyCommand("docker system prune -f"), "destructive");
+  assert.equal(classifyCommand("docker rm -f worker"), "destructive");
+  assert.equal(classifyCommand("docker login registry.example.com"), null);
+  assert.equal(classifyCommand("docker inspect worker"), null);
+  assert.equal(classifyCommand("docker compose config"), null);
+  assert.equal(classifyCommand("docker cp worker:/run/secrets/token ."), null);
   assert.equal(classifyCommand("kubectl deploy app"), "release");
 });
 
@@ -166,8 +196,15 @@ test("cloud operations require critical Controlled authorization and reject cred
   assert.match(sanitized, /REDACTED/);
 });
 
-test("local Docker image builds require critical Controlled authorization", () => {
-  const scope = { ...docsScope, lane: "controlled", risk: "critical", commands: ["container"] };
+test("common local container runtime commands require one medium-risk scope", () => {
+  const scope = { ...docsScope, lane: "direct", risk: "medium", writes: [], commands: ["container-runtime"] };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(requiredScopeRisk(scope), "medium");
+  assert.equal(scopeNeedsApproval(scope), true);
+});
+
+test("local Docker image builds and arbitrary execution require critical Controlled authorization", () => {
+  const scope = { ...docsScope, lane: "controlled", risk: "critical", writes: [], commands: ["container"] };
   assert.deepEqual(validateTaskScope(scope), []);
   assert.equal(requiredScopeRisk(scope), "critical");
   assert.equal(scopeNeedsApproval(scope), true);
@@ -178,6 +215,8 @@ test("the Pi gate requires exact-action confirmation for container builds", () =
   const gate = readFileSync(new URL("../integrations/pi/iuvareai-sandbox.ts", import.meta.url), "utf8");
   assert.match(gate, /commandClass === "container" \|\| commandClass === "release"/);
   assert.match(gate, /ctx\.ui\.confirm\("Critical action"/);
+  assert.match(gate, /container-runtime/);
+  assert.doesNotMatch(gate, /commandClass === "container-runtime"/);
   assert.match(gate, /External reads \(read-only\)/);
   assert.match(gate, /canonicalScopeReadPath/);
   assert.match(gate, /iuvare_cloud_operation/);

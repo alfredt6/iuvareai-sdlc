@@ -26,6 +26,11 @@ This project follows **Iuvare AI SDLC v4 Lean**. Read
   class and use `iuvare_file_operation`. Use exact `writes` for file targets,
   `write_trees` for destination directory trees, and `deletes` for move sources.
   Do not use raw `cp`, `mv`, `rsync`, or `mkdir`.
+- When local Docker/Compose is part of implementation, request
+  `container-runtime` in the initial scope for routine lifecycle and log
+  commands; these do not need repeated confirmation. Status/list commands are
+  inspection. Builds, `run`/`exec`/`create`/`commit`, push, volume deletion,
+  `rm`/`rmi`, and prune retain critical release/destructive controls.
 - Cloud server setup/configuration uses `iuvare_cloud_operation` with a
   Controlled/critical `cloud` grant and exact-action confirmation. Credentials
   are provisioned outside the agent through a protected provider profile,

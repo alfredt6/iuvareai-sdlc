@@ -31,10 +31,15 @@ command classes, verification, approval, and expiry.
   exact write target, and the low-risk `image` command class.
 - Copy/move/mkdir: use `iuvare_file_operation`; destination trees and move
   deletions receive a human preview. Raw shell transfer commands are blocked.
-- Local Docker application image builds: request the `container` command class
-  in a Controlled/critical grant. The exact build command receives a second
-  confirmation. Push/export-to-registry is a release action, and unrelated
-  Docker commands remain blocked.
+- Local container runtime: common Docker/Compose lifecycle and log commands use
+  medium-risk `container-runtime` scope. They receive one scope approval and no
+  per-command confirmation. Status/list commands are inspection. Logs must use
+  synthetic/local data and must not contain credentials or real PII.
+- Higher-impact Docker: builds, `run`, `exec`, `create`, and `commit` use
+  Controlled/critical `container` scope and exact-command confirmation.
+  Push/publish is `release`; volume deletion, `rm`/`rmi`, and prune operations
+  are `destructive`. Authentication, config/inspect that may reveal secrets,
+  file transfer, remote contexts, and unknown commands remain blocked.
 - Cloud operations: request the `cloud` command class in a
   Controlled/critical grant and use `iuvare_cloud_operation`. The tool runs only
   an allowlisted provider CLI without a shell, rejects credential and forbidden
@@ -48,14 +53,17 @@ command classes, verification, approval, and expiry.
 - Low risk is auto-authorized from the explicit user task.
 - Medium/high scope receives a human preview of goal, external read-only inputs,
   writes, commands, and risk.
-- Critical container-build, cloud, release, and destructive commands receive
-  exact-command approval at execution time. Cloud approval is per invocation;
+- Critical container build/arbitrary-execution, cloud, release, and destructive
+  commands receive exact-command approval at execution time. Routine
+  `container-runtime` commands do not receive a second prompt after scope
+  approval. Cloud approval is per invocation;
   changed arguments require a new confirmation.
 - Non-interactive execution fails closed when approval is required.
 
 ## Classification
 
-Normal project docs/source/tests are low. External source reads, scoped directory
+Normal project docs/source/tests and container status/list commands are low.
+Local container lifecycle/log commands, external source reads, scoped directory
 transfers, manifests, and dependencies are medium.
 CI, framework policy, infrastructure definitions, and migrations are high.
 Live cloud/server mutation, production, destructive mutation, and privilege

@@ -49,8 +49,11 @@ For visual work, include design image files/directories in task reads, run
 For crop/resize/rotate/convert/adjust operations, request the image class and use
 \`iuvare_image_operation\`, then inspect the output with \`read\`.
 For copy/move/mkdir, request the filesystem class with scoped destinations and
-use \`iuvare_file_operation\`, never raw shell transfer commands. Cloud server
-setup uses \`iuvare_cloud_operation\` with Controlled/critical \`cloud\` scope and
+use \`iuvare_file_operation\`, never raw shell transfer commands. For common
+local Docker/Compose lifecycle and logs, request medium-risk
+\`container-runtime\` once; status/list commands are inspection and routine
+runtime commands need no second prompt. Build/run/exec/commit, push, and
+destructive cleanup retain critical controls. Cloud server setup uses \`iuvare_cloud_operation\` with Controlled/critical \`cloud\` scope and
 exact-action confirmation. Credentials must be injected outside agent context;
 never request or pass API keys, passwords, tokens, private keys, login commands,
 or secret-retrieval arguments. Every expertise lens may execute repository-local

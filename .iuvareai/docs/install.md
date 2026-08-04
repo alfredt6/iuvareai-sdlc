@@ -40,6 +40,22 @@ Python 3 with Pillow (`python -m pip install Pillow`). File and directory
 transfers request `filesystem` plus `write_trees`/`deletes` as needed and use
 `iuvare_file_operation`; no raw copy or move command is required.
 
+### Local Docker development
+
+Status/list commands such as `docker ps` and `docker compose ps` are inspection.
+For normal development, request `container-runtime` once to use Compose
+`up`/`down`, start/stop/restart, pause/unpause, logs, pull, wait, and related
+local lifecycle commands without repeated confirmation prompts. Agents should
+include this class in the initial implementation scope when local Compose is part
+of verification.
+
+Build, `run`, `exec`, `create`, `commit`, and Compose `up --build` remain critical
+`container` operations with exact-command confirmation. Push/publish remains
+`release`; volume deletion, `rm`/`rmi`, and prune remain `destructive`.
+Authentication, secret-revealing config/inspect, file transfer, explicit remote
+contexts, and unknown Docker commands remain blocked. Use only synthetic local
+logs without credentials or real PII.
+
 ### External source repositories
 
 An agent may inspect a source directory or another repository by placing an
