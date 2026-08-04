@@ -6,16 +6,33 @@ import { parseFrontmatter } from "./lib-frontmatter.mjs";
 
 export const CONDUCTOR = "conductor";
 
+export function isAbsoluteTaskPath(value) {
+  return typeof value === "string" && (isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value));
+}
+
 export function validateRepoPath(value) {
   if (typeof value !== "string" || value.trim() !== value || value.length === 0)
     return "must be a non-empty, trimmed string";
   if (value.includes("\\")) return "must use POSIX '/' separators";
   if (value.includes("\0")) return "must not contain a NUL byte";
-  if (isAbsolute(value) || /^[A-Za-z]:/.test(value)) return "must be repository-relative";
+  if (isAbsoluteTaskPath(value) || /^[A-Za-z]:/.test(value)) return "must be repository-relative";
   const normalized = posix.normalize(value);
   if (normalized === "." || normalized === ".." || normalized.startsWith("../"))
     return "must stay inside the repository";
   if (normalized !== value) return `must be normalized (use '${normalized}')`;
+  return null;
+}
+
+export function validateReadPath(value) {
+  if (typeof value !== "string" || value.trim() !== value || value.length === 0)
+    return "must be a non-empty, trimmed string";
+  if (value.includes("\0")) return "must not contain a NUL byte";
+  if (!isAbsoluteTaskPath(value)) return validateRepoPath(value);
+  const portable = value.replace(/\\/g, "/");
+  const normalizedRoot = /^[A-Za-z]:\//.test(portable)
+    ? posix.normalize(`/${portable.slice(3)}`)
+    : posix.normalize(portable);
+  if (normalizedRoot === "/") return "must not authorize a filesystem root";
   return null;
 }
 
@@ -93,26 +110,72 @@ export function checkWriteSetFit({
   return errors;
 }
 
-// Resolve a tool path and its nearest existing ancestor to prevent lexical and
-// symlink escapes from the project root. Returns a repo-relative POSIX path.
-export function canonicalRepoPath(root, target) {
-  const rootReal = realpathSync(resolve(root));
-  const absolute = resolve(rootReal, target);
+// Resolve a tool path and its nearest existing ancestor so lexical traversal and
+// symlink aliases cannot bypass repository or external-read scope checks.
+function canonicalAbsolutePath(base, target) {
+  if (isAbsoluteTaskPath(target) && !isAbsolute(target))
+    throw new Error(`absolute path is not valid on this platform: ${target}`);
+  const absolute = resolve(base, target);
   let existing = absolute;
   while (!existsSync(existing) && existing !== dirname(existing)) existing = dirname(existing);
   const existingReal = realpathSync(existing);
   const suffix = relative(existing, absolute);
-  const canonical = resolve(existingReal, suffix);
+  return resolve(existingReal, suffix);
+}
+
+// Returns a repo-relative POSIX path and rejects every external target.
+export function canonicalRepoPath(root, target) {
+  const rootReal = realpathSync(resolve(root));
+  const canonical = canonicalAbsolutePath(rootReal, target);
   const rel = relative(rootReal, canonical);
   if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
     throw new Error(`path escapes project root: ${target}`);
   return rel.split(sep).join("/");
 }
 
+// Returns repo-relative paths for local inputs and portable absolute paths for
+// external inputs. Scope entries preserve a trailing slash as a directory marker.
+export function canonicalReadPath(root, target) {
+  const reason = validateReadPath(target);
+  if (reason) throw new Error(`invalid read path '${String(target)}': ${reason}`);
+  const rootReal = realpathSync(resolve(root));
+  const canonical = canonicalAbsolutePath(rootReal, target);
+  const rel = relative(rootReal, canonical);
+  const outside = rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+  if (!outside) {
+    if (rel === "") throw new Error(`read path must name a file or subdirectory: ${target}`);
+    return rel.split(sep).join("/");
+  }
+  return canonical.split(sep).join("/");
+}
+
+export function canonicalScopeReadPath(root, target) {
+  const directoryPrefix = target.endsWith("/") || target.endsWith("\\");
+  const canonical = canonicalReadPath(root, target).replace(/\/$/, "");
+  return directoryPrefix ? `${canonical}/` : canonical;
+}
+
+export function isExternalReadPath(path) {
+  return isAbsoluteTaskPath(path);
+}
+
+export function isForbiddenExternalReadPath(path) {
+  if (!isExternalReadPath(path)) return false;
+  const portable = path.replace(/\\/g, "/").toLowerCase();
+  const parts = portable.split("/");
+  return portable === "/proc" || portable.startsWith("/proc/")
+    || portable === "/sys" || portable.startsWith("/sys/")
+    || portable === "/dev" || portable.startsWith("/dev/")
+    || isSensitivePath(path) || parts.some((part) => [".git", ".hg", ".svn"].includes(part));
+}
+
 export function isSensitivePath(repoPath) {
-  const parts = repoPath.toLowerCase().split("/");
+  const parts = repoPath.replace(/\\/g, "/").toLowerCase().split("/");
   const base = parts.at(-1) ?? "";
-  if (parts.some((p) => [".ssh", ".aws", ".gnupg"].includes(p))) return true;
+  if (parts.some((p) => [
+    ".ssh", ".aws", ".gnupg", ".azure", ".kube", ".terraform.d", ".pulumi",
+    ".vercel", ".railway", ".fly", ".zeabur", ".config", "doctl", "gcloud",
+  ].includes(p))) return true;
   if (base === ".env" || (base.startsWith(".env.") && base !== ".env.example")) return true;
   if (/\.(pem|key|p12|pfx)$/i.test(base)) return true;
   return ["credentials", "credentials.json", "secrets.json", "secrets.yaml", "secrets.yml"].includes(base);

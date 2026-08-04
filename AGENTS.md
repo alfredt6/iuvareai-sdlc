@@ -14,6 +14,9 @@ This project follows **Iuvare AI SDLC v4 Lean**. Read
   `.iuvareai/tasks/*.md` work item and `node scripts/task-check.mjs <path>`.
 - Keep changes small, verify them, and show the diff. Use an independent checker
   for Standard/Controlled work.
+- To inspect another source directory or repository, add its exact absolute file
+  or trailing-`/` directory prefix to task `reads`. External reads are
+  human-previewed and read-only; use repository-relative paths for all outputs.
 - Design images are first-class task inputs. Add their exact files or containing
   directory to the task `reads`, inspect them with the built-in `read` tool before
   UI implementation, and use a model that advertises image input. For cropping,
@@ -23,9 +26,18 @@ This project follows **Iuvare AI SDLC v4 Lean**. Read
   class and use `iuvare_file_operation`. Use exact `writes` for file targets,
   `write_trees` for destination directory trees, and `deletes` for move sources.
   Do not use raw `cp`, `mv`, `rsync`, or `mkdir`.
+- Cloud server setup/configuration uses `iuvare_cloud_operation` with a
+  Controlled/critical `cloud` grant and exact-action confirmation. Credentials
+  are provisioned outside the agent through a protected provider profile,
+  workload identity, secret manager, or execution environment. Never request or
+  pass API keys, passwords, tokens, private keys, authentication commands, or
+  secret-retrieval arguments.
 
 ## Repository boundaries
 
+- External read scope never authorizes external writes, moves, or deletions.
+  Filesystem roots, secret-like paths, and external VCS metadata remain blocked;
+  start the agent in the other repository when it must be modified.
 - Project outputs may be created wherever the authorized task requires,
   including `docs/`, `src/`, `tests/`, safe root documentation, and project
   artifact directories.
@@ -34,7 +46,9 @@ This project follows **Iuvare AI SDLC v4 Lean**. Read
   configuration are protected high-risk areas. Modify them only through an
   explicitly approved Controlled task.
 - Never read or write secrets, credentials, private keys, `.env` values, or real
-  PII.
+  PII. Live cloud commands require container/micro-VM isolation, least-privilege
+  expiring credentials, budget/health controls, provider audit logs, and a
+  rollback or destroy plan.
 - Project test/release/threat evidence belongs in `.iuvareai/evidence/`, `tests/`,
   or project `docs/`—never in reusable `.iuvareai/docs/` methodology.
 

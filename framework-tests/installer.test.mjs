@@ -39,7 +39,11 @@ test("installer and Pi activation ship the runnable permission gate", () => {
   assert.match(gate, /iuvare_request_scope/);
   assert.match(gate, /iuvare_file_operation/);
   assert.match(gate, /iuvare_image_operation/);
+  assert.match(gate, /iuvare_cloud_operation/);
+  assert.match(gate, /Critical cloud action/);
   assert.match(gate, /write_trees/);
+  assert.match(gate, /canonicalScopeReadPath/);
+  assert.match(gate, /External reads \(read-only\)/);
   assert.match(gate, /iuvare-vision/);
   assert.match(gate, /image input/);
   assert.doesNotMatch(gate, /iuvare-persona/);

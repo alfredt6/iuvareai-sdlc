@@ -3,9 +3,12 @@ import { mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { canonicalRepoPath, isSensitivePath, validateRepoPath } from "../scripts/lib-permissions.mjs";
 import {
-  classifyCommand, classifyPathRisk, isPathInScope, isSupportedImagePath, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
+  canonicalReadPath, canonicalRepoPath, canonicalScopeReadPath, isExternalReadPath,
+  isForbiddenExternalReadPath, isSensitivePath, validateReadPath, validateRepoPath,
+} from "../scripts/lib-permissions.mjs";
+import {
+  classifyCommand, classifyPathRisk, classifyReadRisk, isPathInScope, isSupportedImagePath, redactCloudOutput, requiredScopeRisk, scopeNeedsApproval, validateCloudOperation, validateTaskScope,
 } from "../scripts/lib-task-scope.mjs";
 
 const docsScope = {
@@ -45,6 +48,41 @@ test("sensitive and framework paths receive proportionate handling", () => {
   assert.equal(classifyPathRisk("package.json"), "medium");
   assert.equal(classifyPathRisk(".github/workflows/deploy.yml"), "high");
   assert.match(validateTaskScope({ ...docsScope, writes: [".env"] }).join("\n"), /forbidden/);
+});
+
+test("external source reads are explicit, read-only, and human-approved", () => {
+  const external = join(tmpdir(), "iuvare-shared-source").replace(/\\/g, "/") + "/";
+  const scope = { ...docsScope, risk: "medium", reads: [external], writes: [] };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(classifyReadRisk(external), "medium");
+  assert.equal(requiredScopeRisk(scope), "medium");
+  assert.equal(scopeNeedsApproval(scope), true);
+  assert.equal(isExternalReadPath(external), true);
+  assert.match(validateTaskScope({ ...scope, writes: [external + "changed.ts"] }).join("\n"), /repository-relative/);
+});
+
+test("external read paths reject filesystem roots, secrets, and repository metadata", () => {
+  assert.match(validateReadPath("/"), /filesystem root/);
+  assert.match(validateReadPath("C:/"), /filesystem root/);
+  assert.match(validateReadPath("C:/source/../"), /filesystem root/);
+  assert.equal(isForbiddenExternalReadPath("C:/shared/repo/.git/config"), true);
+  assert.equal(isForbiddenExternalReadPath("C:/shared/repo/.env"), true);
+  assert.equal(isForbiddenExternalReadPath("C:/Users/operator/.config/doctl/config.yaml"), true);
+  assert.equal(isForbiddenExternalReadPath("C:/Users/operator/.azure/accessTokens.json"), true);
+  assert.equal(isForbiddenExternalReadPath("/proc/self/environ"), true);
+  assert.match(validateTaskScope({ ...docsScope, risk: "critical", reads: ["C:/shared/repo/.git/"] }).join("\n"), /forbidden external/);
+});
+
+test("canonical external reads retain directory scope without weakening local writes", () => {
+  const root = mkdtempSync(join(tmpdir(), "iuvare-root-"));
+  const external = mkdtempSync(join(tmpdir(), "iuvare-source-"));
+  mkdirSync(join(root, "src"));
+  writeFileSync(join(external, "shared.ts"), "export {};\n");
+  const scopeEntry = canonicalScopeReadPath(root, external + "/");
+  const source = canonicalReadPath(root, join(external, "shared.ts"));
+  assert.equal(isExternalReadPath(scopeEntry), true);
+  assert.equal(isPathInScope(source, [scopeEntry]), true);
+  assert.throws(() => canonicalRepoPath(root, join(external, "shared.ts")), /escapes/);
 });
 
 test("declared risk may not understate calculated risk", () => {
@@ -91,6 +129,13 @@ test("commands map to task classes", () => {
   assert.equal(classifyCommand("npm test"), "quality");
   assert.equal(classifyCommand("npm install zod"), "dependency");
   assert.equal(classifyCommand("npm run db:migrate"), "database");
+  assert.equal(classifyCommand("doctl compute droplet list"), "cloud");
+  assert.equal(classifyCommand("zeabur deploy"), "cloud");
+  assert.equal(classifyCommand("aws ec2 describe-instances"), "cloud");
+  assert.equal(classifyCommand("az vm create --name app"), "cloud");
+  assert.equal(classifyCommand("gcloud compute instances list"), "cloud");
+  assert.equal(classifyCommand("terraform apply plan.tfplan"), "cloud");
+  assert.equal(classifyCommand("pulumi up --yes"), "cloud");
   assert.equal(classifyCommand("docker build -t app:test ."), "container");
   assert.equal(classifyCommand("docker image build ."), "container");
   assert.equal(classifyCommand("docker buildx build --load ."), "container");
@@ -105,6 +150,22 @@ test("commands map to task classes", () => {
   assert.equal(classifyCommand("kubectl deploy app"), "release");
 });
 
+test("cloud operations require critical Controlled authorization and reject credentials", () => {
+  const scope = { ...docsScope, lane: "controlled", risk: "critical", writes: [], commands: ["cloud"] };
+  assert.deepEqual(validateTaskScope(scope), []);
+  assert.equal(requiredScopeRisk(scope), "critical");
+  assert.equal(scopeNeedsApproval(scope), true);
+  assert.match(validateTaskScope({ ...scope, lane: "direct" }).join("\n"), /use controlled/);
+  assert.deepEqual(validateCloudOperation("digitalocean", ["compute", "droplet", "list"]), []);
+  assert.match(validateCloudOperation("zeabur", ["auth", "login", "--token=secret"]).join("\n"), /credential|authentication/);
+  assert.match(validateCloudOperation("aws", ["secretsmanager", "get-secret-value"]).join("\n"), /secret retrieval/);
+  assert.match(validateCloudOperation("aws", ["deploy", "AbCdEf0123456789AbCdEf0123456789AbCdEf01"]).join("\n"), /secret values/);
+  assert.match(validateCloudOperation("custom", ["deploy"]).join("\n"), /unsupported/);
+  const sanitized = redactCloudOutput('{"token":"dop_v1_example","password":"do not retain"} Bearer abc123');
+  assert.doesNotMatch(sanitized, /dop_v1_example|do not retain|abc123/);
+  assert.match(sanitized, /REDACTED/);
+});
+
 test("local Docker image builds require critical Controlled authorization", () => {
   const scope = { ...docsScope, lane: "controlled", risk: "critical", commands: ["container"] };
   assert.deepEqual(validateTaskScope(scope), []);
@@ -117,6 +178,15 @@ test("the Pi gate requires exact-action confirmation for container builds", () =
   const gate = readFileSync(new URL("../integrations/pi/iuvareai-sandbox.ts", import.meta.url), "utf8");
   assert.match(gate, /commandClass === "container" \|\| commandClass === "release"/);
   assert.match(gate, /ctx\.ui\.confirm\("Critical action"/);
+  assert.match(gate, /External reads \(read-only\)/);
+  assert.match(gate, /canonicalScopeReadPath/);
+  assert.match(gate, /iuvare_cloud_operation/);
+  assert.match(gate, /validateCloudOperation/);
+  assert.match(gate, /shell: false/);
+  assert.match(gate, /resolveCloudExecutable/);
+  assert.match(gate, /insideProject/);
+  assert.match(gate, /raw cloud CLI commands are disabled/);
+  assert.doesNotMatch(gate, /pi\.exec\(executable/);
 });
 
 test("git mutation scope is available to every lens through the shared capability model", () => {
@@ -128,6 +198,7 @@ test("git mutation scope is available to every lens through the shared capabilit
 
 test("repository paths reject traversal and secrets", () => {
   assert.match(validateRepoPath("../package.json"), /inside/);
+  assert.equal(isSensitivePath("C:\\shared\\.env.production"), true);
   assert.equal(isSensitivePath(".env.production"), true);
   assert.equal(isSensitivePath(".env.example"), false);
 });

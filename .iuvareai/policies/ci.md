@@ -37,11 +37,13 @@ centralized change boards for normal changes.
 
 ## Promotion
 
-Build once, attest, and promote the same immutable artifact. Production secrets
-exist only in the protected execution environment. Critical deployment commands
-receive exact-action approval. On production regression, rollback automatically
+Build once, attest, and promote the same immutable artifact. Production and cloud credentials exist only in the protected execution
+environment or protected provider profile. Critical deployment and cloud
+commands receive exact-action approval. Provider login, secret retrieval, and
+credential-bearing command arguments remain outside agent execution. On production regression, rollback automatically
 or immediately, retain evidence, and open a fix WorkItem.
 
 This template supplies framework tests and policy hooks. Adopters must wire
-branch protection, secret scanning, environments, provenance, deployment, and
-rollback in their platform; documentation is not enforcement.
+branch protection, secret scanning, environments, provenance, deployment, cloud
+provider audit logs, budget alerts, and rollback in their platform;
+documentation is not enforcement.

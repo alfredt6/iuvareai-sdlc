@@ -40,6 +40,37 @@ Python 3 with Pillow (`python -m pip install Pillow`). File and directory
 transfers request `filesystem` plus `write_trees`/`deletes` as needed and use
 `iuvare_file_operation`; no raw copy or move command is required.
 
+### External source repositories
+
+An agent may inspect a source directory or another repository by placing an
+exact absolute file or directory prefix in task `reads`. Use `/` separators and
+end directory prefixes with `/`, for example `C:/Brainbots/shared-src/` or
+`/opt/company/reference-repo/`. External reads are at least medium risk, so Pi
+shows them as read-only in the scope preview. A read-only inspection grant may
+leave `writes` and `write_trees` empty.
+
+The grant does not create a multi-repository write capability. Writes, directory
+trees, moves, and deletions remain relative to the active repository. An
+external source can be opened with `read`, inspected as an image, or copied into
+an authorized local destination with `iuvare_file_operation`. Filesystem roots,
+secret-like files, and VCS metadata directories remain blocked even when a
+parent directory is scoped. Start Pi in the other repository when that
+repository itself must be modified.
+
+Re-run `node scripts/activate-pi-skills.mjs` and restart/reload Pi after upgrading
+an existing installation so the updated extension schema is active.
+
+### Cloud provider operation
+
+Install and authenticate the required provider CLI outside Pi, then run Pi in an
+isolated environment where that CLI can resolve a least-privilege, short-lived
+credential without exposing its value to the agent. Cloud tasks request
+Controlled/critical `cloud` scope and call `iuvare_cloud_operation`; each exact
+action receives a second confirmation. Raw cloud CLI commands, login/auth
+commands, credential arguments, and secret retrieval remain blocked. See
+[Credential-Safe Cloud Operations](cloud-operations.md) for supported providers,
+setup, verification, and rollback requirements.
+
 ## Project setup
 
 1. Add container/micro-VM isolation for production-adjacent work.

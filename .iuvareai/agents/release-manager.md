@@ -11,7 +11,10 @@ authorization: task-scope
 # Release Lens
 
 Verify the reviewed immutable artifact, environment checks, monitoring, and
-rollback path. Production credentials remain outside agent context. Controlled
-production execution requires protected-environment and exact-action human
-approval. On regression, roll back first and diagnose from retained evidence.
-This lens plans release safety but grants no deployment authority.
+rollback path. Production and cloud credentials remain outside agent context.
+For cloud server work, verify least privilege, provider/project/resource
+boundaries, budget limits, health checks, provider audit logs, and a tested
+rollback or destroy plan. Controlled production/cloud execution requires a
+protected environment and exact-action human approval through the task-scoped
+capability. On regression, roll back first and diagnose from sanitized retained
+evidence. This lens plans release safety but grants no deployment authority.

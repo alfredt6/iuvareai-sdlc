@@ -40,10 +40,21 @@ Design screenshots can be listed in task `reads` and inspected through Pi's
 built-in `read` tool before UI implementation. Agents can crop, resize, rotate,
 convert, and visually adjust authorized images with `iuvare_image_operation`.
 Copy/move/mkdir operations use the scoped `iuvare_file_operation` tool rather
-than raw shell commands. Local Docker application image builds use a
+than raw shell commands. Agents can also inspect another source directory or
+repository by adding an absolute file or trailing-`/` directory prefix to task
+`reads` (for example, `C:/Brainbots/shared-src/`). External reads are
+human-previewed and read-only; writes and moves remain inside the active
+repository, while secrets and external VCS metadata remain blocked. Local
+Docker application image builds use a
 Controlled/critical `container` command capability and receive a second,
 exact-command confirmation; other Docker operations remain blocked unless
-separately classified by policy.
+separately classified by policy. Cloud server setup uses the shell-free
+`iuvare_cloud_operation` tool with a Controlled/critical `cloud` grant and
+confirmation of every exact provider action. DigitalOcean, Zeabur, AWS, Azure,
+GCP, Terraform, Pulumi, Fly.io, Railway, and Vercel CLIs are allowlisted.
+Credentials are configured outside Pi through a protected CLI profile, workload
+identity, secret manager, or isolated execution environment—never pasted into
+chat or tool arguments.
 
 ## Delivery lanes
 
@@ -83,14 +94,18 @@ node scripts/task-check.mjs .iuvareai/tasks/<task>.md
 ## Security boundary
 
 The Pi interceptor controls direct reads/writes/commands but is not an OS
-sandbox. Production-adjacent adopters must provide container or micro-VM
-isolation, branch protection, secret scanning, immutable artifacts, provenance,
-environment approval, and rollback automation.
+sandbox. Its external-source grant controls direct task reads but is not a
+machine-wide process boundary. Production-adjacent and cloud operations must run
+in a container or micro-VM with least-privilege, short-lived credentials.
+Adopters must also provide branch protection, secret scanning, immutable
+artifacts, provenance, environment approval, provider audit/budget controls,
+and rollback automation.
 
 See the [canonical specification](.iuvareai/IUVARE_AI_SDLC_v4.md),
 [workflow guide](.iuvareai/docs/complete-workflow.md),
 [design-image guide](.iuvareai/docs/design-reference-images.md),
-[file-operation guide](.iuvareai/docs/file-operations.md), and
+[file-operation guide](.iuvareai/docs/file-operations.md),
+[cloud-operations guide](.iuvareai/docs/cloud-operations.md), and
 [installation guide](.iuvareai/docs/install.md).
 
 MIT licensed.

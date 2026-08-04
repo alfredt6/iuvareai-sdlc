@@ -31,7 +31,8 @@ high-impact repository changes, and irreversible/external actions.
 ## 2. Five principles
 
 1. **Task scope is authority.** A short-lived capability names exact output
-   files, allowed reads, command classes, verification, risk, and expiry.
+   files, repository-local and external reads, command classes, verification,
+   risk, and expiry.
 2. **Personas are optional lenses.** Analyst, Architect, UX, and other skills add
    expertise; they never grant or remove file access.
 3. **Process follows risk.** Low-risk work stays direct. Controls increase only
@@ -78,6 +79,15 @@ Rules:
   only by the dedicated file-operation tool.
 - `deletes` names source files/directories that a move may remove.
 - `reads` contains exact files or directory prefixes and excludes secrets/PII.
+  Repository-local inputs use normalized relative paths. Source directories and
+  repositories outside the active repository use absolute paths, are
+  canonicalized before grant creation, and always receive human preview.
+- External inputs are read-only. Built-in writes, write trees, move sources, and
+  deletions remain repository-relative. An authorized external source may be
+  inspected, used as an image input, or copied into an authorized local output;
+  external moves and writes are forbidden.
+- Filesystem roots, secret-like paths, and external VCS metadata such as `.git/`
+  cannot be authorized. Directory scopes do not override those exclusions.
   Design screenshots and image directories are valid read inputs.
 - For visual implementation, inspect each relevant image before coding using a
   vision-capable model; never infer design content from filenames alone.
@@ -90,13 +100,18 @@ Rules:
   are `network`, and destructive operations are `destructive`.
 - Grants expire after 60 minutes by default and are retained in the session log.
 - Low-risk normal work is auto-authorized from the explicit user task.
-- Medium/high scope receives one human preview and confirmation.
+- Medium/high scope receives one human preview and confirmation. Every external
+  read is at least medium risk and appears in that preview as read-only.
 - Critical actions receive parameter-bound approval again at execution time.
 - Copy, move, and directory creation use `iuvare_file_operation` with the
   `filesystem` command class; raw `cp`/`mv`/`rsync`/`mkdir` stay blocked.
 - Local Docker application image builds use the `container` command class and
   require Controlled/critical scope plus exact-command confirmation. Registry
   pushes remain release actions; non-build Docker operations stay blocked.
+- Cloud server setup uses `iuvare_cloud_operation` with the `cloud` command
+  class. It requires Controlled/critical scope, an allowlisted provider CLI,
+  shell-free argument execution, and exact-action confirmation. Raw cloud CLI
+  commands through `bash` remain blocked.
 - Non-interactive runs fail closed when human approval is required.
 
 ## 5. Risk classification
@@ -104,13 +119,18 @@ Rules:
 | Risk | Examples | Approval |
 |---|---|---|
 | **Low** | `docs/`, `src/`, `tests/`, safe README changes, image transforms, inspection, tests | Automatic task grant |
-| **Medium** | Dependencies, manifests, lockfiles, build config, network calls | Scope preview + human confirmation |
+| **Medium** | External source reads, dependencies, manifests, lockfiles, build config, network calls | Scope preview + human confirmation |
 | **High** | CI, agent/framework policy, infrastructure, migrations, database mutation | Controlled lane + human confirmation + independent review |
-| **Critical** | Production deployment, destructive data/files, privilege changes, local Docker application image builds | Exact-action approval, expiry/replay protection, audit |
+| **Critical** | Cloud server mutation, production deployment, destructive data/files, privilege changes, local Docker application image builds | Exact-action approval, expiry/replay protection, audit |
 
-Secrets, private keys, credentials, and real PII are forbidden to agent context
-in every lane. Risk is based on impact, not merely on whether a file is at the
-repository root.
+Secrets, private keys, credentials, external VCS metadata, and real PII are
+forbidden to agent context in every lane. Cloud credentials are injected by a
+protected profile, workload identity, secret manager, or execution environment;
+they never appear in tool arguments. Risk is based on impact, not merely on
+whether a file is at the repository root. A read-only task may request a grant
+with external `reads` and no outputs; a cloud-only task may request `commands:
+[cloud]` with no repository outputs. Repository-local discovery alone needs no
+grant.
 
 ## 6. Work items
 
@@ -165,8 +185,9 @@ are loaded only when useful:
 - Product Owner for difficult decomposition.
 - Developer/Delivery Agent for implementation.
 - Code Reviewer/Test Architect/QA as independent verifier lenses.
-- Release Manager for release planning; critical execution remains separately
-  authorized.
+- Release Manager for release and cloud-operation planning; every critical
+  execution remains separately authorized and credentials remain outside agent
+  context.
 - Orchestrator for portfolio coordination, never for routine metadata edits.
 
 For Standard/Controlled work, maker and checker should use independent contexts
@@ -215,12 +236,15 @@ high-risk paths; project artifacts remain writable through exact task grants.
 
 1. **Task readiness** checks scope shape, path safety, risk fit, acceptance, and
    verification before Standard/Controlled execution.
-2. **Harness interception** enforces active grant reads, exact writes, command
-   classes, expiry, and approvals.
+2. **Harness interception** canonicalizes scoped local/external reads and
+   enforces read containment, exact local writes, command classes, expiry, and
+   approvals.
 3. **OS isolation** contains shell/process behavior. Containers or micro-VMs are
    mandatory for production-adjacent work.
 4. **CI and environment controls** enforce independent checks, immutable
-   artifacts, provenance, secret scanning, approvals, and rollback.
+   artifacts, provenance, secret scanning, approvals, and rollback. Cloud CLIs
+   run in a container or micro-VM with a least-privilege, short-lived credential
+   supplied outside the model context.
 
 A harness interceptor is not an OS sandbox.
 
@@ -230,8 +254,12 @@ A harness interceptor is not an OS sandbox.
 - Normal low-risk production changes use peer review, CI, monitoring, and a
   rollback path rather than a centralized approval board.
 - Controlled releases require protected-environment approval.
-- Production credentials are injected by the platform and never enter agent
-  context.
+- Production and cloud credentials are injected by the platform or resolved by
+  a protected provider profile and never enter agent context, task metadata,
+  command arguments, or retained output.
+- Cloud operations use an allowlisted CLI without a shell. Authentication,
+  secret retrieval, credential-bearing arguments, and common privilege-key
+  operations are forbidden; provider output is bounded and redacted.
 - On regression, rollback first and open a new fix work item; do not live-debug
   production.
 

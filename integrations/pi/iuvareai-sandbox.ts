@@ -1,13 +1,17 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { isToolCallEventType, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
-import { cp, lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { isToolCallEventType, truncateTail, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import { access, cp, lstat, mkdir, readdir, realpath, rename, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { dirname, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { canonicalRepoPath, isSensitivePath } from "../../scripts/lib-permissions.mjs";
 import {
-  classifyCommand, isPathInScope, isSupportedImagePath, maxRisk, requiredScopeRisk, scopeNeedsApproval, validateTaskScope,
+  canonicalReadPath, canonicalRepoPath, canonicalScopeReadPath, isExternalReadPath,
+  isForbiddenExternalReadPath, isSensitivePath,
+} from "../../scripts/lib-permissions.mjs";
+import {
+  classifyCommand, isPathInScope, isSupportedImagePath, maxRisk, redactCloudOutput, requiredScopeRisk,
+  scopeNeedsApproval, validateCloudOperation, validateTaskScope,
 } from "../../scripts/lib-task-scope.mjs";
 
 type Lane = "direct" | "standard" | "controlled";
@@ -19,6 +23,10 @@ type Grant = {
 };
 
 const TTL_MS = 60 * 60 * 1000;
+const CLOUD_EXECUTABLES = {
+  digitalocean: "doctl", zeabur: "zeabur", aws: "aws", azure: "az", gcp: "gcloud",
+  terraform: "terraform", pulumi: "pulumi", flyio: "flyctl", railway: "railway", vercel: "vercel",
+} as const;
 
 export default function (pi: ExtensionAPI) {
   let grant: Grant | undefined;
@@ -37,30 +45,31 @@ export default function (pi: ExtensionAPI) {
       ? "The current model supports image input."
       : "WARNING: the current model does not advertise image input; switch to a vision-capable model before implementing from visual references.";
     return {
-      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first write/edit or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- To crop, resize, rotate, flip, convert, or adjust an image, request the image command class with the source in reads and exact target in writes, then use iuvare_image_operation and inspect the result with read.\n- For copy, move, or directory creation, request the filesystem command class plus exact writes or approved write_trees/deletes, then use iuvare_file_operation. Do not use raw cp/mv/rsync/mkdir.\n- Every expertise lens may run Git commands: read-only Git is inspection; request git for local mutations, network for remote operations, or destructive for destructive operations.\n- Local Docker application image builds require a Controlled/critical scope with the container command class and receive exact-command confirmation; other Docker operations remain blocked.\n- ${vision}`,
+      systemPrompt: event.systemPrompt + `\n\nIuvare task authorization:\n- Personas are optional expertise lenses, not permissions.\n- Before the first external read, write/edit, or non-inspection command, call iuvare_request_scope in a separate tool turn.\n- Request exact output files and the smallest read/command scope. Low-risk work is authorized automatically; sensitive work asks the human once.\n- Repository-local reads use relative paths. External source directories or repositories use explicit absolute paths in reads and always receive human preview; external access is read-only.\n- If the task grows, request a replacement scope instead of writing outside it.\n- Design images are valid task inputs. Include their exact files or containing directory in reads, then use the built-in read tool on jpg/jpeg/png/gif/webp/bmp files before UI implementation. Images are sent to the model as attachments.\n- To crop, resize, rotate, flip, convert, or adjust an image, request the image command class with the source in reads and exact target in writes, then use iuvare_image_operation and inspect the result with read.\n- For copy, move, or directory creation, request the filesystem command class plus exact writes or approved write_trees/deletes, then use iuvare_file_operation. Do not use raw cp/mv/rsync/mkdir.\n- Every expertise lens may run Git commands: read-only Git is inspection; request git for local mutations, network for remote operations, or destructive for destructive operations.\n- Local Docker application image builds require a Controlled/critical scope with the container command class and receive exact-command confirmation; other Docker operations remain blocked.\n- Cloud server operations use iuvare_cloud_operation with a Controlled/critical cloud capability and exact-action confirmation. Credentials are injected outside agent context; never request or pass API keys in chat, files, or tool arguments.\n- ${vision}`,
     };
   });
 
   pi.registerTool({
     name: "iuvare_request_scope",
     label: "Iuvare Task Scope",
-    description: "Request a short-lived, task-scoped capability before mutating files. Call this alone before write/edit/bash mutations. Personas do not grant file access.",
+    description: "Request a short-lived, task-scoped capability for external reads or repository mutations. Call this alone before the first external read or mutation. Personas do not grant file access.",
     promptSnippet: "Request exact task-scoped read/write/command authorization before repository mutations",
-    promptGuidelines: ["Use iuvare_request_scope before the first repository mutation and whenever the required scope changes."],
+    promptGuidelines: ["Use iuvare_request_scope before the first external read or repository mutation and whenever the required scope changes."],
     parameters: Type.Object({
       goal: Type.String({ description: "One-sentence outcome" }),
       lane: StringEnum(["direct", "standard", "controlled"] as const),
       risk: StringEnum(["low", "medium", "high", "critical"] as const),
-      reads: Type.Array(Type.String(), { description: "Exact files or directory prefixes ending in /. Include design-image files/directories needed by the task." }),
+      reads: Type.Array(Type.String(), { description: "Exact repository-relative or external absolute files; directory prefixes end in /. External reads are read-only and human-previewed." }),
       writes: Type.Array(Type.String(), { description: "Exact output files for write/edit and file operations" }),
       write_trees: Type.Array(Type.String(), { description: "Directory prefixes ending in /, usable only by iuvare_file_operation; always human-previewed" }),
       deletes: Type.Array(Type.String(), { description: "Exact source files/directories authorized to be removed by a move" }),
-      commands: Type.Array(StringEnum(["inspect", "quality", "build", "container", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive"] as const)),
+      commands: Type.Array(StringEnum(["inspect", "quality", "build", "container", "cloud", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive"] as const)),
       verification: Type.Array(Type.String()),
     }),
     async execute(_id, params, _signal, _update, ctx) {
       const candidate = {
         ...params,
+        reads: params.reads.map((path) => canonicalScopeReadPath(ctx.cwd, path)),
         writeTrees: params.write_trees,
       } as Omit<Grant, "approvedAt" | "expiresAt" | "approval">;
       const errors = validateTaskScope(candidate);
@@ -72,6 +81,7 @@ export default function (pi: ExtensionAPI) {
         if (!ctx.hasUI) throw new Error("medium/high/critical task scope requires interactive human approval");
         const preview = [
           `Goal: ${candidate.goal}`, `Lane: ${candidate.lane}`, `Risk: ${requiredRisk}`,
+          `External reads (read-only):\n${candidate.reads.filter(isExternalReadPath).map((path) => `  - ${path}`).join("\n") || "  - none"}`,
           `Writes:\n${candidate.writes.map((path) => `  - ${path}`).join("\n") || "  - none"}`,
           `Write trees:\n${candidate.writeTrees.map((path) => `  - ${path}`).join("\n") || "  - none"}`,
           `Move deletions:\n${candidate.deletes.map((path) => `  - ${path}`).join("\n") || "  - none"}`,
@@ -90,8 +100,60 @@ export default function (pi: ExtensionAPI) {
         : "";
       if (visionWarning && ctx.hasUI) ctx.ui.notify(visionWarning.trim(), "warning");
       return {
-        content: [{ type: "text", text: `Authorized ${grant.lane}/${grant.risk} scope for ${grant.writes.length} exact output(s) and ${grant.writeTrees.length} write tree(s). Proceed within scope.${visionWarning}` }],
+        content: [{ type: "text", text: `Authorized ${grant.lane}/${grant.risk} scope for ${grant.reads.filter(isExternalReadPath).length} external read(s), ${grant.writes.length} exact output(s), and ${grant.writeTrees.length} write tree(s). Proceed within scope.${visionWarning}` }],
         details: { grant, imageInputs, visionCapable: ctx.model?.input.includes("image") ?? false },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "iuvare_cloud_operation",
+    label: "Iuvare Cloud Operation",
+    description: "Run one approved cloud-provider CLI action without a shell. Requires a Controlled/critical cloud grant and exact-action confirmation. Credentials must already exist in a protected profile, workload identity, secret manager, or inherited environment; never pass credentials as arguments. Output is redacted and limited to 20KB/500 lines.",
+    promptSnippet: "Configure approved cloud infrastructure through a credential-safe, confirmation-gated provider CLI",
+    promptGuidelines: [
+      "Use iuvare_cloud_operation for DigitalOcean, Zeabur, AWS, Azure, GCP, Terraform, Pulumi, Fly.io, Railway, or Vercel operations instead of bash.",
+      "Never ask for or place API keys, passwords, tokens, private keys, secret values, or credential flags in iuvare_cloud_operation arguments.",
+    ],
+    parameters: Type.Object({
+      provider: StringEnum(["digitalocean", "zeabur", "aws", "azure", "gcp", "terraform", "pulumi", "flyio", "railway", "vercel"] as const),
+      args: Type.Array(Type.String({ minLength: 1, maxLength: 1000 }), { minItems: 1, maxItems: 64, description: "CLI arguments only; credentials and authentication/secret-management actions are forbidden" }),
+      timeout_seconds: Type.Optional(Type.Integer({ minimum: 1, maximum: 1800, description: "Execution timeout; default 600 seconds" })),
+    }),
+    async execute(_id, params, signal, _update, ctx) {
+      if (!grant || grant.expiresAt <= Date.now()) throw new Error("no active task scope; call iuvare_request_scope first");
+      if (grant.lane !== "controlled" || grant.risk !== "critical" || !grant.commands.includes("cloud"))
+        throw new Error("cloud operations require an active Controlled/critical scope with the cloud command class");
+      const errors = validateCloudOperation(params.provider, params.args);
+      if (errors.length) throw new Error(errors.join("; "));
+      if (!ctx.hasUI) throw new Error("cloud operations require interactive exact-action approval");
+
+      const executable = await resolveCloudExecutable(CLOUD_EXECUTABLES[params.provider], ctx.cwd);
+      const display = [executable, ...params.args].map(formatCommandArgument).join(" ");
+      const approved = await ctx.ui.confirm(
+        "Critical cloud action",
+        `Provider: ${params.provider}\n\nCommand (credentials injected externally):\n${display}\n\nExecute this exact cloud operation?`,
+      );
+      if (!approved) throw new Error("cloud operation was not approved");
+
+      const result = await runCloudCli(
+        executable, params.args, ctx.cwd, (params.timeout_seconds ?? 600) * 1000, signal,
+      );
+      const safeOutput = redactCloudOutput([result.stdout, result.stderr].filter(Boolean).join("\n"));
+      const truncated = truncateTail(safeOutput || `(no provider output; exit ${result.code})`, {
+        maxBytes: 20 * 1024,
+        maxLines: 500,
+      });
+      const audit = {
+        provider: params.provider, args: params.args, exitCode: result.code,
+        killed: result.killed, outputTruncated: truncated.truncated, timestamp: Date.now(),
+      };
+      pi.appendEntry("iuvare-cloud-operation", audit);
+      if (result.code !== 0)
+        throw new Error(`${params.provider} cloud operation failed with exit ${result.code}. Redacted output:\n${truncated.content}`);
+      return {
+        content: [{ type: "text", text: `${params.provider} cloud operation completed. Redacted output:\n${truncated.content}` }],
+        details: audit,
       };
     },
   });
@@ -99,12 +161,12 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "iuvare_file_operation",
     label: "Iuvare File Operation",
-    description: "Safely copy or move a file/directory, or create a directory, within the active task scope. Use instead of raw cp, mv, rsync, or mkdir.",
+    description: "Safely copy or move a file/directory, or create a directory, within the active task scope. Copies may use an authorized external read source; writes and moves remain repository-local.",
     promptSnippet: "Copy/move files and directories using task-scoped filesystem authorization",
     promptGuidelines: ["Use iuvare_file_operation—not bash cp/mv/rsync/mkdir—for repository file transfers and directory creation."],
     parameters: Type.Object({
       action: StringEnum(["copy", "move", "mkdir"] as const),
-      source: Type.Optional(Type.String({ description: "Repository-relative source for copy/move" })),
+      source: Type.Optional(Type.String({ description: "Scoped source for copy/move; an external absolute source is allowed only for copy" })),
       target: Type.String({ description: "Repository-relative destination" }),
       overwrite: Type.Optional(Type.Boolean({ description: "Allow replacement/merge when target exists; default false" })),
     }),
@@ -124,7 +186,11 @@ export default function (pi: ExtensionAPI) {
       }
 
       if (!params.source) throw new Error(`${params.action} requires source`);
-      const source = canonicalRepoPath(ctx.cwd, params.source);
+      const source = params.action === "copy"
+        ? canonicalReadPath(ctx.cwd, params.source)
+        : canonicalRepoPath(ctx.cwd, params.source);
+      if (isSensitivePath(source) || isForbiddenExternalReadPath(source))
+        throw new Error(`source is excluded from task context: ${source}`);
       if (!isPathInScope(source, [...grant.reads, ...grant.writes, ...writeTrees]))
         throw new Error(`source '${source}' is outside the active task read scope`);
       if (params.action === "move" && !isPathInScope(source, grant.deletes ?? []))
@@ -133,7 +199,7 @@ export default function (pi: ExtensionAPI) {
         throw new Error("source and target must be distinct; a directory cannot be transferred into itself");
 
       const sourceAbsolute = resolve(ctx.cwd, source);
-      await assertNoSymlinks(sourceAbsolute);
+      await assertSafeTransferSource(sourceAbsolute);
       const targetExists = await pathExists(targetAbsolute);
       if (targetExists && !params.overwrite) throw new Error(`target already exists: ${target}; set overwrite only when replacement was intended`);
 
@@ -170,7 +236,7 @@ export default function (pi: ExtensionAPI) {
     ],
     parameters: Type.Object({
       action: StringEnum(["inspect", "edit", "convert"] as const),
-      source: Type.String({ description: "Repository-relative jpg/jpeg/png/gif/webp/bmp source" }),
+      source: Type.String({ description: "Scoped repository-relative or external absolute jpg/jpeg/png/gif/webp/bmp source" }),
       target: Type.Optional(Type.String({ description: "Exact repository-relative output path; required for edit or convert" })),
       overwrite: Type.Optional(Type.Boolean({ description: "Allow replacing an existing exact target; default false" })),
       crop: Type.Optional(Type.Object({
@@ -194,9 +260,12 @@ export default function (pi: ExtensionAPI) {
       background: Type.Optional(Type.String({ description: "Color used when flattening transparency to JPEG; default #ffffff" })),
     }),
     async execute(_id, params, signal, _update, ctx) {
-      const source = canonicalRepoPath(ctx.cwd, params.source);
-      if (isSensitivePath(source)) throw new Error(`sensitive path is excluded from context: ${source}`);
+      const source = canonicalReadPath(ctx.cwd, params.source);
+      if (isSensitivePath(source) || isForbiddenExternalReadPath(source))
+        throw new Error(`sensitive or repository-metadata path is excluded from context: ${source}`);
       if (!isSupportedImagePath(source)) throw new Error("source must be jpg, jpeg, png, gif, webp, or bmp");
+      if (isExternalReadPath(source) && !grant)
+        throw new Error("external image inspection requires an active task scope with the absolute source in reads");
       if (grant && !isPathInScope(source, [...grant.reads, ...grant.writes, ...(grant.writeTrees ?? [])]))
         throw new Error(`source '${source}' is outside the active task read scope`);
       const sourceAbsolute = resolve(ctx.cwd, source);
@@ -261,9 +330,12 @@ export default function (pi: ExtensionAPI) {
 
     if (isToolCallEventType("read", event)) {
       let path: string;
-      try { path = canonicalRepoPath(ctx.cwd, event.input.path); }
+      try { path = canonicalReadPath(ctx.cwd, event.input.path); }
       catch (error) { return block(String((error as Error).message ?? error)); }
-      if (isSensitivePath(path)) return block(`sensitive path is excluded from context: ${path}`);
+      if (isSensitivePath(path) || isForbiddenExternalReadPath(path))
+        return block(`sensitive or repository-metadata path is excluded from context: ${path}`);
+      if (isExternalReadPath(path) && !grant)
+        return block("external reads require an active task scope with the absolute input in reads");
       if (grant && !isPathInScope(path, [...grant.reads, ...grant.writes, ...(grant.writeTrees ?? [])]))
         return block(`${path} is outside the active task read scope; request a replacement scope`);
       return;
@@ -287,6 +359,8 @@ export default function (pi: ExtensionAPI) {
       if (commandClass === "inspect") return;
       if (commandClass === "filesystem")
         return block("raw cp/mv/rsync/mkdir is disabled; use iuvare_file_operation with task-scoped sources and targets");
+      if (commandClass === "cloud")
+        return block("raw cloud CLI commands are disabled; use iuvare_cloud_operation for shell-free exact-action approval");
       if (commandClass === "image")
         return block("raw image shell utilities are disabled; use iuvare_image_operation with an exact scoped output");
       if (!grant) return block("no active task scope; call iuvare_request_scope first");
@@ -301,11 +375,54 @@ export default function (pi: ExtensionAPI) {
 
   function showStatus(ctx: any, notify = false) {
     const label = grant
-      ? `Iuvare: ${grant.lane}/${grant.risk} · ${grant.writes.length} file(s)/${grant.writeTrees?.length ?? 0} tree(s) · ${Math.max(0, Math.ceil((grant.expiresAt - Date.now()) / 60000))}m`
-      : "Iuvare: discovery/read-only · request scope before mutation";
+      ? `Iuvare: ${grant.lane}/${grant.risk} · ${grant.reads.filter(isExternalReadPath).length} external read(s) · ${grant.writes.length} file(s)/${grant.writeTrees?.length ?? 0} tree(s) · ${Math.max(0, Math.ceil((grant.expiresAt - Date.now()) / 60000))}m`
+      : "Iuvare: local discovery · request scope before external reads or mutation";
     ctx.ui.setStatus("iuvare-sandbox", label);
     if (notify) ctx.ui.notify(label, grant ? "info" : "warning");
   }
+}
+
+async function resolveCloudExecutable(name: string, cwd: string) {
+  const suffixes = process.platform === "win32" ? [".exe", ".cmd", ".bat", ""] : [""];
+  for (const directory of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
+    for (const suffix of suffixes) {
+      const candidate = resolve(directory, `${name}${suffix}`);
+      try { await access(candidate); }
+      catch { continue; }
+      const canonical = await realpath(candidate);
+      const fromProject = relative(resolve(cwd), canonical);
+      const insideProject = fromProject === ""
+        || (fromProject !== ".." && !fromProject.startsWith(`..${sep}`) && !isAbsolute(fromProject));
+      if (insideProject) continue;
+      if (process.platform === "win32" && /\.(?:cmd|bat)$/i.test(canonical))
+        throw new Error(`${name} resolves to a shell wrapper; install a native executable or run the cloud task in an isolated Linux environment`);
+      return canonical;
+    }
+  }
+  throw new Error(`approved cloud CLI '${name}' was not found outside the project on PATH`);
+}
+
+async function runCloudCli(
+  executable: string, args: string[], cwd: string, timeoutMs: number, signal?: AbortSignal,
+): Promise<{ stdout: string; stderr: string; code: number | null; killed: boolean }> {
+  return new Promise((accept, reject) => {
+    const child = spawn(executable, args, { cwd, windowsHide: true, shell: false, signal });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const retainTail = (current: string, chunk: unknown) => `${current}${String(chunk)}`.slice(-256 * 1024);
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, timeoutMs);
+    child.stdout.on("data", (chunk) => { stdout = retainTail(stdout, chunk); });
+    child.stderr.on("data", (chunk) => { stderr = retainTail(stderr, chunk); });
+    child.on("error", (error) => { clearTimeout(timer); reject(error); });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      accept({ stdout, stderr, code, killed: timedOut || child.killed });
+    });
+  });
 }
 
 async function runImageHelper(cwd: string, request: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
@@ -355,11 +472,18 @@ async function pathExists(path: string) {
   }
 }
 
-async function assertNoSymlinks(path: string): Promise<void> {
+async function assertSafeTransferSource(path: string): Promise<void> {
+  const portable = path.replace(/\\/g, "/");
+  if (isSensitivePath(portable) || isForbiddenExternalReadPath(portable))
+    throw new Error(`transfer source contains a forbidden path: ${path}`);
   const stat = await lstat(path);
   if (stat.isSymbolicLink()) throw new Error(`symbolic-link transfers are not allowed: ${path}`);
   if (!stat.isDirectory()) return;
-  for (const entry of await readdir(path)) await assertNoSymlinks(resolve(path, entry));
+  for (const entry of await readdir(path)) await assertSafeTransferSource(resolve(path, entry));
+}
+
+function formatCommandArgument(value: string) {
+  return /^[A-Za-z0-9_./:=@+-]+$/.test(value) ? value : JSON.stringify(value);
 }
 
 function block(reason: string) {

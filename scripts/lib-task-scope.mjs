@@ -1,9 +1,11 @@
-import { isSensitivePath, validateRepoPath } from "./lib-permissions.mjs";
+import {
+  isExternalReadPath, isForbiddenExternalReadPath, isSensitivePath, validateReadPath, validateRepoPath,
+} from "./lib-permissions.mjs";
 
 export const LANES = new Set(["direct", "standard", "controlled"]);
 export const RISKS = ["low", "medium", "high", "critical"];
 export const COMMAND_CLASSES = new Set([
-  "inspect", "quality", "build", "container", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
+  "inspect", "quality", "build", "container", "cloud", "git", "image", "filesystem", "dependency", "database", "network", "release", "destructive",
 ]);
 
 const RISK_INDEX = new Map(RISKS.map((risk, index) => [risk, index]));
@@ -18,13 +20,47 @@ const MEDIUM_PATHS = [
   /^\.iuvareai\/(specs|tasks|stories|deltas)\//,
 ];
 const COMMAND_RISK = {
-  inspect: "low", quality: "low", build: "low", container: "critical", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
+  inspect: "low", quality: "low", build: "low", container: "critical", cloud: "critical", git: "medium", image: "low", filesystem: "medium", dependency: "medium", network: "medium",
   database: "high", release: "critical", destructive: "critical",
 };
 const SUPPORTED_IMAGE_RE = /\.(?:jpe?g|png|gif|webp|bmp)$/i;
+export const CLOUD_PROVIDERS = new Set([
+  "digitalocean", "zeabur", "aws", "azure", "gcp", "terraform", "pulumi", "flyio", "railway", "vercel",
+]);
+const CLOUD_CREDENTIAL_ARG_RE = /(?:^|[-_])(token|api[-_]?key|password|passphrase|credential|client[-_]?secret|access[-_]?key|private[-_]?key)(?:$|[=_-])/i;
+const CLOUD_SECRET_VALUE_RE = /(?:^|=)(?:dop_v1_|sk-|ghp_|github_pat_|xox[baprs]-|AKIA)[A-Za-z0-9_\-]+$/;
+const CLOUD_OPAQUE_VALUE_RE = /^[A-Za-z0-9+/_=-]{40,}$/;
+const CLOUD_FORBIDDEN_ACTION_RE = /(^|\s)(auth|login|logout|configure|credentials?|secrets?|secretsmanager|iam)(\s|$)|\b(get-access-token|get-secret-value|show-secrets|service-accounts?\s+keys?|role-assignment|keyvault\s+secret|variables?\s+(?:list|get)|env\s+(?:pull|list|ls))\b/i;
 
 export function isSupportedImagePath(path) {
   return typeof path === "string" && SUPPORTED_IMAGE_RE.test(path);
+}
+
+export function validateCloudOperation(provider, args) {
+  const errors = [];
+  if (!CLOUD_PROVIDERS.has(provider)) errors.push(`unsupported cloud provider: ${provider}`);
+  if (!Array.isArray(args) || args.length === 0) return [...errors, "cloud args must contain an action"];
+  if (args.length > 64) errors.push("cloud args may contain at most 64 entries");
+  for (const arg of args) {
+    if (typeof arg !== "string" || arg.length === 0) errors.push("every cloud arg must be a non-empty string");
+    else if (arg.length > 1000) errors.push("cloud args may not exceed 1000 characters");
+    else if (/[\0\r\n]/.test(arg)) errors.push("cloud args may not contain NUL or newline characters");
+    else if (CLOUD_CREDENTIAL_ARG_RE.test(arg) || CLOUD_SECRET_VALUE_RE.test(arg) || CLOUD_OPAQUE_VALUE_RE.test(arg))
+      errors.push("cloud args may not contain credential flags or secret values");
+  }
+  if (Array.isArray(args) && CLOUD_FORBIDDEN_ACTION_RE.test(args.join(" ")))
+    errors.push("authentication, secret retrieval, and privilege-management cloud actions are forbidden");
+  return [...new Set(errors)];
+}
+
+export function redactCloudOutput(value) {
+  return String(value ?? "")
+    .replace(/-----BEGIN [^-\r\n]*PRIVATE KEY-----[\s\S]*?-----END [^-\r\n]*PRIVATE KEY-----/gi, "[REDACTED PRIVATE KEY]")
+    .replace(/\bBearer\s+[^\s"']+/gi, "Bearer [REDACTED]")
+    .replace(/(["']?(?:token|password|passphrase|secret|api[-_ ]?key|client[-_ ]?secret|access[-_ ]?key|private[-_ ]?key)["']?\s*[:=]\s*)(["'])[^"']*\2/gi, "$1$2[REDACTED]$2")
+    .replace(/(["']?(?:token|password|passphrase|secret|api[-_ ]?key|client[-_ ]?secret|access[-_ ]?key|private[-_ ]?key)["']?\s*[:=]\s*)[^\s,}]+/gi, "$1[REDACTED]")
+    .replace(/\b(?:dop_v1_|sk-|ghp_|github_pat_|xox[baprs]-|AKIA)[A-Za-z0-9_\-]+\b/g, "[REDACTED]")
+    .replace(/[A-Za-z0-9+/_=-]{40,}/g, "[REDACTED OPAQUE VALUE]");
 }
 
 export function compareRisk(left, right) {
@@ -47,10 +83,16 @@ export function classifyPathRisk(path) {
   return "low";
 }
 
-export function requiredScopeRisk({ lane, writes = [], writeTrees = [], deletes = [], commands = [] }) {
+export function classifyReadRisk(path) {
+  if (isForbiddenExternalReadPath(path)) return "critical";
+  return isExternalReadPath(path) ? "medium" : "low";
+}
+
+export function requiredScopeRisk({ lane, reads = [], writes = [], writeTrees = [], deletes = [], commands = [] }) {
   const laneRisk = lane === "controlled" ? "high" : "low";
   return maxRisk(
     laneRisk,
+    ...reads.map(classifyReadRisk),
     ...writes.map(classifyPathRisk),
     ...writeTrees.map((path) => maxRisk("medium", classifyPathRisk(path))),
     ...deletes.map((path) => maxRisk("medium", classifyPathRisk(path))),
@@ -71,7 +113,14 @@ export function validateTaskScope(scope) {
   for (const field of ["writeTrees", "deletes"]) {
     if (scope[field] !== undefined && !Array.isArray(scope[field])) errors.push(`${field} must be a list when present`);
   }
-  for (const field of ["reads", "writes", "writeTrees", "deletes"]) {
+  for (const path of Array.isArray(scope.reads) ? scope.reads : []) {
+    const reason = validateReadPath(path);
+    if (reason) errors.push(`invalid reads path '${String(path)}': ${reason}`);
+    else if (isExternalReadPath(path) && isForbiddenExternalReadPath(path))
+      errors.push(`forbidden external read path: ${path}`);
+    else if (!isExternalReadPath(path) && isForbiddenRepoPath(path)) errors.push(`forbidden reads path: ${path}`);
+  }
+  for (const field of ["writes", "writeTrees", "deletes"]) {
     for (const path of Array.isArray(scope[field]) ? scope[field] : []) {
       const reason = validateRepoPath(path);
       if (reason) errors.push(`invalid ${field} path '${String(path)}': ${reason}`);
@@ -83,9 +132,12 @@ export function validateTaskScope(scope) {
   for (const commandClass of Array.isArray(scope.commands) ? scope.commands : []) {
     if (!COMMAND_CLASSES.has(commandClass)) errors.push(`unknown command class: ${commandClass}`);
   }
+  const hasExternalReads = Array.isArray(scope.reads) && scope.reads.some(isExternalReadPath);
+  const hasCloudActivity = Array.isArray(scope.commands) && scope.commands.includes("cloud");
   if ((!Array.isArray(scope.writes) || scope.writes.length === 0)
-    && (!Array.isArray(scope.writeTrees) || scope.writeTrees.length === 0))
-    errors.push("writes or writeTrees must authorize at least one output");
+    && (!Array.isArray(scope.writeTrees) || scope.writeTrees.length === 0)
+    && !hasExternalReads && !hasCloudActivity)
+    errors.push("writes, writeTrees, an external read, or cloud activity must authorize the task");
   if (!Array.isArray(scope.verification) || scope.verification.length === 0)
     errors.push("verification must contain at least one completion check");
 
@@ -104,9 +156,14 @@ export function scopeNeedsApproval(scope) {
 }
 
 export function isPathInScope(path, entries = []) {
-  return entries.some((entry) => entry.endsWith("/")
-    ? path === entry.slice(0, -1) || path.startsWith(entry)
-    : path === entry);
+  return entries.some((entry) => {
+    const ignoreCase = process.platform === "win32" && isExternalReadPath(path) && isExternalReadPath(entry);
+    const candidate = ignoreCase ? path.toLowerCase() : path;
+    const scopeEntry = ignoreCase ? entry.toLowerCase() : entry;
+    return scopeEntry.endsWith("/")
+      ? candidate === scopeEntry.slice(0, -1) || candidate.startsWith(scopeEntry)
+      : candidate === scopeEntry;
+  });
 }
 
 export function classifyCommand(command) {
@@ -121,6 +178,7 @@ export function classifyCommand(command) {
   if (/^(npm|pnpm|yarn|bun)\s+(test|run\s+(test[^ ]*|lint|typecheck|check))(\s|$)/.test(value)) return "quality";
   if (/^node\s+(--test\b|scripts\/(task-check|dor-check|contract-guard|okf-conformance)\.mjs\b)/.test(value)) return "quality";
   if (/^(npm|pnpm|yarn|bun)\s+run\s+build(\s|$)/.test(value)) return "build";
+  if (/^(doctl|zeabur|aws|az|gcloud|terraform|pulumi|flyctl|railway|vercel)(\s|$)/i.test(value)) return "cloud";
   const isDockerBuild = /^docker\s+(?:build|image\s+build|buildx\s+build)(\s|$)/i.test(value)
     || /^docker(?:-compose|\s+compose)\s+build(\s|$)/i.test(value);
   if (isDockerBuild) {

@@ -37,17 +37,24 @@ Read .iuvareai/IUVARE_AI_SDLC_v4.md for normative rules.
 - Standard: normal features/fixes; compact WorkItem + CI + independent review.
 - Controlled: high-impact work; explicit approval and evidence.
 
-Do not ask the operator to select a persona. Before mutation, call
-\`iuvare_request_scope\` alone with exact writes, minimal reads, command classes,
-and verification. Low-risk work auto-authorizes; sensitive scope asks once.
-Personas are optional expertise lenses and never grant permissions.
+Do not ask the operator to select a persona. Before mutation or an external
+read, call \`iuvare_request_scope\` alone with exact writes, minimal reads, command
+classes, and verification. Low-risk work auto-authorizes; sensitive scope asks
+once. Personas are optional expertise lenses and never grant permissions.
+External source files or trailing-\`/\` directory prefixes may use absolute paths
+in \`reads\`; they are always human-previewed and read-only. Outputs and moves
+remain repository-relative, and secret-like files/VCS metadata remain blocked.
 For visual work, include design image files/directories in task reads, run
 \`/iuvare-vision\`, and inspect supported images with \`read\` before coding.
 For crop/resize/rotate/convert/adjust operations, request the image class and use
 \`iuvare_image_operation\`, then inspect the output with \`read\`.
 For copy/move/mkdir, request the filesystem class with scoped destinations and
-use \`iuvare_file_operation\`, never raw shell transfer commands. Every expertise
-lens may execute repository-local Git commands: read-only operations are
+use \`iuvare_file_operation\`, never raw shell transfer commands. Cloud server
+setup uses \`iuvare_cloud_operation\` with Controlled/critical \`cloud\` scope and
+exact-action confirmation. Credentials must be injected outside agent context;
+never request or pass API keys, passwords, tokens, private keys, login commands,
+or secret-retrieval arguments. Every expertise lens may execute repository-local
+Git commands: read-only operations are
 inspection; request \`git\` for local mutations, \`network\` for remote operations,
 or \`destructive\` for destructive operations.
 `);
@@ -56,6 +63,7 @@ copyFileSync(EXTENSION_SRC, EXTENSION_OUT);
 console.log(`Activated ${entries.length + 1} optional skill(s) into ${OUT}/.`);
 console.log(`✓ installed ${EXTENSION_OUT} (task-scoped, risk-based permission gate)`);
 if (!hasPillow()) console.warn("! image editing requires Python 3 + Pillow: python -m pip install Pillow");
+console.log("Cloud operations require a preinstalled allowlisted CLI and credentials configured outside Pi.");
 console.log("Ask for work normally; the agent requests scope automatically. No persona/story command is required.");
 
 function hasPillow() {

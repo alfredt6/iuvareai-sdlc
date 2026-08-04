@@ -52,6 +52,18 @@ test("WorkItem requires acceptance and exact output files", () => {
   assert.match(errors, /exact files/);
 });
 
+test("WorkItems may declare an approval-gated external source input", () => {
+  const { root, path } = fixture();
+  const external = join(mkdtempSync(join(tmpdir(), "iuvare-external-")), "shared.ts");
+  writeFileSync(external, "export {};\n");
+  const file = join(root, path);
+  const portable = external.replace(/\\/g, "/");
+  writeFileSync(file, readFileSync(file, "utf8")
+    .replace("risk: low", "risk: medium")
+    .replace("  - src/input.ts", `  - ${portable}`));
+  assert.deepEqual(validateWorkItem(path, { root }).errors, []);
+});
+
 test("contract version is conditional on touching the contract", () => {
   const { root, path } = fixture();
   const file = join(root, path);
